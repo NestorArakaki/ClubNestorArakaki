@@ -21,9 +21,59 @@ class AvailabilityScreen extends StatefulWidget {
 
 class _AvailabilityScreenState extends State<AvailabilityScreen> {
   late DateTime _day;
-  int? _selected;
-  int _duration = 1, _revision = 0;
+  int? _first, _last;
+  int _revision = 0;
   bool _busy = false, _uncertain = false;
+
+  int get _duration => _first == null ? 0 : _last! - _first! + 1;
+
+  bool _isSelected(int index) =>
+      _first != null && index >= _first! && index <= _last!;
+
+  bool _isAvailable(Slot slot) =>
+      slot.available && slot.startsAt.isAfter(DateTime.now());
+
+  void _toggleSlot(Availability data, int index) {
+    if (_busy || _uncertain || !_isAvailable(data.slots[index])) return;
+    if (_first == null) {
+      setState(() {
+        _first = _last = index;
+      });
+      return;
+    }
+    if (_isSelected(index)) {
+      setState(() {
+        if (_first == _last) {
+          _first = _last = null;
+        } else if (index == _first) {
+          _first = index + 1;
+        } else {
+          // Quitar un bloque intermedio también quita los posteriores.
+          _last = index - 1;
+        }
+      });
+      return;
+    }
+    final first = index < _first! ? index : _first!;
+    final last = index > _last! ? index : _last!;
+    if ((index != _first! - 1 && index != _last! + 1) ||
+        last - first + 1 > data.maxDuration(first)) {
+      showMessage(
+        context,
+        'Elegí un bloque disponible contiguo a la selección.',
+      );
+      return;
+    }
+    setState(() {
+      _first = first;
+      _last = last;
+    });
+  }
+
+  String _selectionSummary(Availability data) =>
+      '${venueTime(data.slots[_first!].startsAt, data.timezone)} – '
+      '${venueTime(data.slots[_last!].endsAt, data.timezone)}\n'
+      'Duración: $_duration hora(s)';
   @override
   void initState() {
     super.initState();
@@ -33,8 +83,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
 
   void _reload() {
     setState(() {
-      _selected = null;
-      _duration = 1;
+      _first = _last = null;
       _revision++;
     });
   }
@@ -51,20 +100,28 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
     if (chosen != null && mounted) {
       setState(() {
         _day = chosen;
-        _selected = null;
-        _duration = 1;
+        _first = _last = null;
         _revision++;
       });
     }
   }
 
   Future<void> _book(Availability data) async {
-    if (_selected == null || _busy) return;
-    final slot = data.slots[_selected!];
+    if (_first == null || _busy || _uncertain) return;
+    if (!data.slots.sublist(_first!, _last! + 1).every(_isAvailable)) {
+      showMessage(
+        context,
+        'Un horario seleccionado ya pasó. Actualizamos los turnos.',
+      );
+      _reload();
+      return;
+    }
+    final slot = data.slots[_first!];
+    final duration = _duration;
     if (!await confirm(
       context,
       'Confirmar reserva',
-      '${widget.venue.name}\n${widget.court.name}\n${venueTime(slot.startsAt, data.timezone)}\nDuración: $_duration hora(s)\nZona: ${data.timezone}',
+      '${widget.venue.name}\n${widget.court.name}\n${_selectionSummary(data)}\nZona: ${data.timezone}',
     )) {
       return;
     }
@@ -76,7 +133,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
       final result = await widget.api.createBooking(
         widget.court.id,
         slot,
-        _duration,
+        duration,
       );
       if (mounted) {
         showMessage(context, 'Reserva #${result.id} confirmada.');
@@ -177,42 +234,33 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                         'La sede está cerrada o la cancha no tiene turnos para esta fecha.',
                       ),
                     ),
+                  const Text(
+                    'Marcá bloques consecutivos. Al desmarcar uno intermedio, '
+                    'también se desmarcan los posteriores.',
+                  ),
                   for (var i = 0; i < data.slots.length; i++)
-                    ListTile(
-                      selected: _selected == i,
-                      enabled: data.slots[i].available && !_busy && !_uncertain,
-                      leading: Icon(
-                        _selected == i
-                            ? Icons.radio_button_checked
-                            : Icons.radio_button_off,
-                      ),
+                    CheckboxListTile(
+                      key: ValueKey('slot-$i'),
+                      value: _isSelected(i),
+                      selected: _isSelected(i),
+                      controlAffinity: ListTileControlAffinity.leading,
                       title: Text(
                         '${hour(data.slots[i].startsAt, data.timezone)}–${hour(data.slots[i].endsAt, data.timezone)}',
                       ),
                       subtitle: Text(
-                        data.slots[i].available
+                        _isAvailable(data.slots[i])
                             ? 'Disponible'
                             : 'Ocupado o pasado',
                       ),
-                      onTap: () => setState(() {
-                        _selected = i;
-                        _duration = 1;
-                      }),
-                    ),
-                  if (_selected != null) ...[
-                    DropdownButtonFormField<int>(
-                      key: ValueKey('$_selected-$_duration'),
-                      initialValue: _duration,
-                      decoration: const InputDecoration(labelText: 'Duración'),
-                      items: [
-                        for (var n = 1; n <= data.maxDuration(_selected!); n++)
-                          DropdownMenuItem(value: n, child: Text('$n hora(s)')),
-                      ],
-                      onChanged: _busy || _uncertain
+                      onChanged:
+                          !_isAvailable(data.slots[i]) || _busy || _uncertain
                           ? null
-                          : (value) => setState(() {
-                              _duration = value!;
-                            }),
+                          : (_) => _toggleSlot(data, i),
+                    ),
+                  if (_first != null) ...[
+                    Text(
+                      _selectionSummary(data),
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 16),
                     FilledButton(

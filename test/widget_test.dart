@@ -198,6 +198,11 @@ void main() {
                 'ends_at': '2035-12-20T22:00:00Z',
                 'available': reads == 1,
               },
+              {
+                'starts_at': '2035-12-20T22:00:00Z',
+                'ends_at': '2035-12-20T23:00:00Z',
+                'available': reads == 1,
+              },
             ],
           });
         }),
@@ -214,6 +219,14 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('18:00–19:00'));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('19:00–20:00'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widgetList<CheckboxListTile>(find.byType(CheckboxListTile))
+            .every((tile) => tile.value!),
+        isTrue,
+      );
       await tester.ensureVisible(find.text('Confirmar reserva'));
       await tester.tap(find.text('Confirmar reserva'));
       await tester.pumpAndSettle();
@@ -221,7 +234,13 @@ void main() {
       await tester.pumpAndSettle();
       expect(posts, 1);
       expect(reads, 2);
-      expect(find.text('Ocupado o pasado'), findsOneWidget);
+      expect(find.text('Ocupado o pasado'), findsNWidgets(2));
+      expect(
+        tester
+            .widgetList<CheckboxListTile>(find.byType(CheckboxListTile))
+            .every((tile) => !tile.value!),
+        isTrue,
+      );
       expect(find.textContaining('confirmada.'), findsNothing);
       api.close();
     },
