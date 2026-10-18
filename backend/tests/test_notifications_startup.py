@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 from pathlib import Path
 from unittest.mock import Mock
@@ -138,6 +139,7 @@ def test_json_credentials_are_used_without_file(app, monkeypatch):
         ),
     ],
 )
+@pytest.mark.skipif(shutil.which("sh") is None, reason="Requiere sh (Render/Linux o Git Bash/WSL)")
 def test_startup_gates_gunicorn(tmp_path, migration_exit, seed_exit, seed, expected):
     log = tmp_path / "commands"
     flask = tmp_path / "flask"

@@ -1,5 +1,8 @@
 # Verificación de la implementación
 
+Los apartados iniciales registran la rama base del backend. Para los resultados
+de la ampliación actual, ver la sección final y [la verificación integral](../../docs/VERIFICACION.md).
+
 Comprobaciones ejecutadas en esta tarea con Python 3.12.14 y PostgreSQL 16 en un
 contenedor local descartable. No se usó SQLite ni credenciales Firebase reales.
 
@@ -37,8 +40,8 @@ contenedor local descartable. No se usó SQLite ni credenciales Firebase reales.
 2. **Render**: crear los servicios y montar el Secret File siguiendo el README.
    No se desplegó ni se crearon recursos pagos. Verificar permisos para
    `btree_gist`, la migración previa al deploy y salud/autenticación en HTTPS.
-3. **Flutter**: integrar el cliente con el contrato de `API.md` y comprobar el
-   flujo completo en emulador/dispositivo. No se modificó el código Flutter.
+3. **Flutter**: la ampliación ya integra el cliente; queda probar Firebase real
+   y el flujo completo en un emulador/dispositivo del usuario.
 4. **GitHub Actions**: el workflow se incluye para repetir las pruebas en cada
    cambio del backend; su ejecución remota depende de GitHub y de las opciones
    habilitadas en el repositorio. Los resultados locales no afirman un CI remoto exitoso.
