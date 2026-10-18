@@ -15,6 +15,8 @@ from .schemas import (
     BookingSchema,
     CourtPageSchema,
     CourtSchema,
+    DeviceResultSchema,
+    DeviceTokenSchema,
     ErrorSchema,
     HealthSchema,
     OpeningHourSchema,
@@ -212,3 +214,45 @@ class BookingDetail(MethodView):
     def delete(self, booking_id):
         """Cancelar una reserva propia futura y liberar el turno. Es idempotente."""
         return cancel_booking(g.user.id, booking_id)
+
+
+@blp.route("/devices")
+class Devices(MethodView):
+    @login_required
+    @blp.doc(security=SECURITY)
+    @blp.arguments(DeviceTokenSchema)
+    @blp.response(200, DeviceResultSchema)
+    def post(self, data):
+        """Registrar/actualizar el token FCM de este dispositivo para la identidad actual."""
+        import hashlib
+
+        from sqlalchemy.dialects.postgresql import insert
+
+        from .models import Device
+
+        stmt = insert(Device).values(
+            user_id=g.user.id,
+            token=data["token"],
+            token_hash=hashlib.sha256(data["token"].encode()).hexdigest(),
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[Device.token_hash],
+            set_={"user_id": g.user.id, "updated_at": utcnow()},
+        )
+        db.session.execute(stmt)
+        db.session.commit()
+        return {"registered": True}
+
+    @login_required
+    @blp.doc(security=SECURITY)
+    @blp.arguments(DeviceTokenSchema)
+    @blp.response(200, DeviceResultSchema)
+    def delete(self, data):
+        """Desvincular sólo un token propio. Idempotente, sin revelar su propietario."""
+        from .models import Device
+
+        db.session.execute(
+            sa.delete(Device).where(Device.user_id == g.user.id, Device.token == data["token"])
+        )
+        db.session.commit()
+        return {"registered": False}

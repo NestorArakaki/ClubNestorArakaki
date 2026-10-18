@@ -259,3 +259,25 @@ En producción usar HTTPS de Render. En Flutter Web, configurar `CORS_ORIGINS`
 con el origen real, incluido el puerto de desarrollo. Para mostrar la hora de
 la sede cuando difiere de la del teléfono, usar su zona IANA con una librería
 de zonas horarias; `DateTime.toLocal()` usa la zona del teléfono.
+
+## Dispositivos y FCM
+
+- `POST /devices`, Bearer, JSON `{"token":"<token FCM real del dispositivo>"}`:
+  200 `{"registered":true}`. Es idempotente y reasocia un dispositivo compartido
+  al usuario autenticado actual. No acepta UID ni user_id del cliente.
+- `DELETE /devices`, Bearer, mismo JSON: 200 `{"registered":false}`. Elimina
+  únicamente el registro propio, sin revelar si pertenece a otra identidad.
+- Token de 20–4096 caracteres sin espacios. No se devuelve ni registra en logs.
+  Una huella SHA-256 sirve de índice único para no exceder el límite B-tree.
+- Con `FCM_ENABLED=true`, después del commit de creación/cancelación se intenta
+  enviar al propietario `type=booking_created|booking_cancelled`, `booking_id`
+  y `recipient_uid` (UID Firebase firmado). Android usa el canal `bookings`.
+  El texto visible es genérico; la app comprueba el destinatario y consulta
+  los detalles mediante la ruta autenticada de reservas propias.
+- Una cancelación repetida no repite el aviso. Tokens inválidos que FCM informa
+  como `UnregisteredError` se eliminan. Fallas de Firebase se registran sólo
+  por tipo y no cambian el éxito de la reserva.
+- Envío best effort, síncrono y sin cola persistente: una caída del proceso
+  después del commit puede perder un aviso. Cada llamada al SDK tiene timeout
+  HTTP de 5 segundos; varios dispositivos agregan latencia. No hay recordatorios
+  programados ni garantía de entrega. Las reservas se consultan siempre por API.

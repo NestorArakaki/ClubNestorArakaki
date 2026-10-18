@@ -87,3 +87,14 @@ class Booking(db.Model):
     @property
     def status(self):
         return "cancelled" if self.cancelled_at else "confirmed"
+
+
+class Device(db.Model):
+    __tablename__ = "devices"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(sa.ForeignKey("users.id"), index=True)
+    token: Mapped[str] = mapped_column(sa.String(4096))
+    token_hash: Mapped[str] = mapped_column(sa.String(64), unique=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), server_default=sa.func.now()
+    )

@@ -71,6 +71,9 @@ def create_booking(user_id, data):
                 409, "booking_conflict", "La cancha ya está reservada en ese horario."
             ) from exc
         raise
+    from .notifications import notify_booking
+
+    notify_booking(booking, "booking_created")
     return booking
 
 
@@ -121,9 +124,14 @@ def cancel_booking(user_id, booking_id):
     )
     if booking is None:
         raise ApiError(404, "not_found", "La reserva solicitada no existe.")
-    if booking.cancelled_at is None:
+    changed = booking.cancelled_at is None
+    if changed:
         if booking.starts_at <= utcnow():
             raise ApiError(409, "booking_started", "No se puede cancelar una reserva ya iniciada.")
         booking.cancelled_at = utcnow()
     db.session.commit()
+    if changed:
+        from .notifications import notify_booking
+
+        notify_booking(booking, "booking_cancelled")
     return booking

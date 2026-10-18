@@ -51,3 +51,17 @@ visual o claves de idempotencia. Para un cambio de turno se cancela y se reserva
 otro sujeto a disponibilidad. Una falla de red después de enviar un POST requiere
 consultar las reservas propias antes de reintentar. Estos límites se documentan
 también en el contrato para el cliente.
+
+## Ampliación Flutter/FCM y Render Free
+
+Esta ampliación parte de `origin/feat/backend-reservas` (`0711e9a`).
+La suite actual sobre PostgreSQL 16 ejecutó **80 pruebas: 80 aprobadas**,
+con **97% de cobertura**. Incluye registro idempotente y reasignación de dispositivos,
+borrado restringido al propietario, validaciones y tokens largos, envío al
+propietario, limpieza de tokens inválidos, cancelación sin avisos duplicados,
+fallo push sin perder reserva, credenciales JSON y arranque bloqueado ante error
+de migración/seed. El SDK Firebase se sustituye únicamente en pruebas.
+Los resultados anteriores de 69 tests corresponden a la rama base.
+
+El despliegue actual utiliza Free y `sh scripts/start.sh`; ya no usa pre-deploy
+ni Render Shell. Consultar la guía raíz para los resultados completos y pasos externos.

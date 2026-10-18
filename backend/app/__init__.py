@@ -34,6 +34,8 @@ def create_app(test_config=None):
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         SQLALCHEMY_ENGINE_OPTIONS={"pool_pre_ping": True, "pool_size": 5, "max_overflow": 5},
         FIREBASE_PROJECT_ID=os.getenv("FIREBASE_PROJECT_ID", ""),
+        FIREBASE_SERVICE_ACCOUNT_JSON=os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON", ""),
+        FCM_ENABLED=os.getenv("FCM_ENABLED", "false").lower() == "true",
         API_TITLE="ClubNestorArakaki API",
         API_VERSION="1.0.0",
         OPENAPI_VERSION="3.0.3",

@@ -3,6 +3,7 @@ from logging.config import fileConfig
 
 from alembic import context
 from flask import current_app
+from sqlalchemy import text
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -87,7 +88,10 @@ def run_migrations_online():
 
     connectable = get_engine()
 
-    with connectable.connect() as connection:
+    with connectable.begin() as connection:
+        # Serializa migraciones de despliegues concurrentes en la misma base.
+        connection.execute(text("SET LOCAL lock_timeout = '60s'"))
+        connection.execute(text("SELECT pg_advisory_xact_lock(724820261)"))
         context.configure(connection=connection, target_metadata=get_metadata(), **conf_args)
 
         with context.begin_transaction():
