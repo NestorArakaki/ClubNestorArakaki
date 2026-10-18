@@ -50,7 +50,7 @@ Las sedes/canchas se ordenan por `id`; las reservas por inicio e `id` ascendente
 `GET /venues/1/courts` devuelve el mismo envoltorio, con objetos como:
 
 ```json
-{"id": 1, "venue_id": 1, "name": "Fútbol 5 - 1", "sport": "football", "active": true}
+{"id": 1, "venue_id": 1, "name": "Sede_Central_demo_Calle_Demo_100_Futbol_1", "sport": "football", "active": true}
 ```
 
 `GET /courts/1` devuelve directamente ese objeto. Una cancha inactiva sigue
@@ -180,7 +180,7 @@ canceladas. Sólo se muestran las reservas de la identidad autenticada.
 `DELETE /bookings/42` no lleva cuerpo y responde **200** con el objeto completo,
 `status: "cancelled"` y `cancelled_at` en UTC. La disponibilidad se libera antes
 de responder. Repetir la cancelación devuelve el mismo resultado. Una reserva
-confirmada que ya empezó responde 409. Un ID ajeno o inexistente responde 404.
+confirmada cuyo horario ya finalizó responde 409; se admite cancelar en curso. Un ID ajeno o inexistente responde 404.
 
 ## Errores
 
@@ -214,7 +214,7 @@ Los mensajes de la librería pueden estar en inglés; `code` es estable para Flu
 | 400 | `validation_error` | JSON mal formado; corregir solicitud. |
 | 401 | `authentication_required`, `invalid_token` | Obtener/renovar token; si persiste, iniciar sesión otra vez. |
 | 404 | `not_found` | Recurso inexistente o reserva ajena. |
-| 409 | `booking_conflict`, `court_unavailable`, `booking_started` | Refrescar disponibilidad o mostrar restricción de cancelación. |
+| 409 | `booking_conflict`, `court_unavailable`, `booking_finished` | Refrescar disponibilidad o mostrar restricción de cancelación. |
 | 413 | `request_entity_too_large` | Cuerpo mayor a 16 KiB. |
 | 422 | `validation_error`, `invalid_datetime`, `invalid_hour`, `past_booking`, `past_date`, `outside_opening_hours` | Corregir fecha, horario o campos. |
 | 503 | `auth_unavailable`, `database_unavailable` | Servicio/configuración no disponible; reintentar más tarde. |
@@ -281,5 +281,30 @@ de zonas horarias; `DateTime.toLocal()` usa la zona del teléfono.
   por tipo y no cambian el éxito de la reserva.
 - Envío best effort, síncrono y sin cola persistente: una caída del proceso
   después del commit puede perder un aviso. Cada llamada al SDK tiene timeout
-  HTTP de 5 segundos; varios dispositivos agregan latencia. No hay recordatorios
-  programados ni garantía de entrega. Las reservas se consultan siempre por API.
+  HTTP de 5 segundos; varios dispositivos agregan latencia. Hay recordatorios
+  programados mediante un workflow externo; no hay garantía de entrega. Las reservas se consultan siempre por API.
+
+
+## Nombre académico y recordatorios próximos
+
+El campo `name` de las canchas es el nombre completo derivado de sede, dirección,
+tipo y número: `Court.full_name`. No se renumeran IDs ni se cambia el formato de
+los demás campos. `courts.name` conserva internamente la etiqueta de precarga.
+Flutter puede filtrar `sport` sobre la lista paginada completa de la sede.
+
+`POST /internal/booking-reminders` no recibe cuerpo. Requiere el header privado
+`X-Scheduler-Key` configurado en el servidor; no se autoriza con Bearer de usuario.
+El secreto debe tener al menos 32 caracteres. Falta de configuración o FCM
+inactivo: 503. Clave errónea/ausente: 401. Éxito: 200 con contadores:
+`{"checked":1,"sent":1,"pending":0}`. No expone tokens ni datos de otros usuarios.
+
+Selecciona reservas confirmadas sin recordatorio aceptado cuyo inicio esté entre
+ahora (excluido) y ahora + 60 minutos (incluido). Usa bloqueo de fila con
+`SKIP LOCKED`. Si FCM acepta al menos un dispositivo, guarda `reminder_sent_at`;
+si no, permanece pendiente. El payload usa `type=booking_reminder`, `booking_id`
+y `recipient_uid`. Android descarta la entrega diferida después del comienzo
+mediante TTL. El cliente navega al detalle propio como en los otros avisos.
+
+El workflow gratuito y sus limitaciones están en [RECORDATORIOS.md](../../docs/RECORDATORIOS.md).
+Una caída entre envío y commit puede duplicar un recordatorio; no es una garantía
+exactamente una vez ni una prueba de lectura del destinatario.

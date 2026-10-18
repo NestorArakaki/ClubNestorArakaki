@@ -1,79 +1,76 @@
-# Verificación integral
+# Verificación integral y auditoría académica
 
-Rama: `feat/flutter-firebase-free-render`, creada desde
-`origin/feat/backend-reservas`, commit `0711e9a7e14f71955fc5393c303ce6c7885e9e7c`.
-Se obtuvieron las referencias remotas y se comprobaron `backend/` y
-`backend/docs/API.md` antes de modificar archivos. No se partió de `main`.
+La rama de trabajo sigue siendo `feat/flutter-firebase-free-render`, basada en
+`origin/feat/backend-reservas` (`0711e9a`). Se leyó completa la consigna adjunta
+antes de esta auditoría. Ver [matriz](MATRIZ_CUMPLIMIENTO_TP.md) y
+[guía de defensa](GUIA_DEFENSA_TP.md) para el alcance académico.
 
-## Comprobaciones ejecutadas
+## Resultado local actual
 
-Entorno: Linux Cloud, Flutter 3.47.7 / Dart 3.13.5, Python 3.12.14 y PostgreSQL 16
-local descartable en Docker. No se usó SQLite ni credenciales Firebase reales.
+Linux Cloud, Flutter 3.47.7 / Dart 3.13.5, Python 3.12.14 y PostgreSQL 16 real
+local descartable. No se usó SQLite ni credenciales Firebase reales.
 
-| Comprobación | Resultado |
+| Comprobación ejecutada | Resultado |
 | --- | --- |
-| `flutter pub get` | Dependencias resueltas y `pubspec.lock` actualizado |
+| `flutter pub get` (implementación previa, dependencias sin cambios en auditoría) | Correcto, lockfile conservado |
 | `flutter analyze` | Sin observaciones |
-| `flutter test` | 24 pruebas aprobadas |
-| Formato Dart | `dart format lib test` aplicado |
-| `pytest --cov=app --cov-report=term-missing` | 80 pruebas aprobadas, 97% cobertura |
-| Ruff análisis y formato | Sin observaciones |
-| `pip check` | Sin dependencias rotas |
-| Alembic | `downgrade base` → `upgrade` correcto, sólo en base descartable |
-| `flask --app wsgi db check` | Sin operaciones pendientes |
-| Precarga | Dos ejecuciones correctas; se conservan dos sedes demo |
-| Arranque `sh scripts/start.sh` | Migración → seed opcional → Gunicorn real |
-| HTTP real sobre Gunicorn | Salud, sedes, canchas, Swagger y OpenAPI: 200 |
-| OpenAPI | Incluye los endpoints autenticados de dispositivos; validado por pytest |
-| Git | Sin errores de whitespace |
-| APK debug (CI GitHub) | `flutter build apk --debug` aprobado, sin credenciales |
-| CI Backend | [Workflow exitoso](https://github.com/NestorArakaki/ClubNestorArakaki/actions/runs/39132875111) |
-| CI Flutter | [Workflow exitoso](https://github.com/NestorArakaki/ClubNestorArakaki/actions/runs/39132875080), incluye compilación Android |
+| `flutter test` | **27 pruebas aprobadas** |
+| Formato Dart | Sin diferencias |
+| `pytest --cov=app --cov-report=term-missing` | **85 pruebas aprobadas, 96% cobertura** |
+| Ruff análisis/formato | Correcto |
+| `flask --app wsgi db check` | Sin cambios pendientes |
+| Migración 1003 | Upgrade real; downgrade a 1002 → upgrade correcto en base descartable |
+| `pip check` (implementación previa, dependencias Python sin cambios) | Correcto |
+| Git | Whitespace verificado |
+| CI Backend actual (`4cadd6c`) | Éxito |
+| CI Flutter actual (`4cadd6c`) | Éxito, incluido APK debug con ícono propio |
 
-Las pruebas Flutter cubren validación de login/registro/recuperación, navegación
-según sesión, cierre de sesión, perfil, paginación, parseo UTF-8 y JSON, catálogo,
-horarios, disponibilidad, horas contiguas, conversión a zona de la sede,
-Bearer/renovación única ante 401, errores HTTP 400/404/409/422/500/503, timeout y
-red, reserva exitosa, conflicto con recarga, respuesta perdida sin repetir POST,
-confirmación de cancelación, historial, campos de perfil y tokens FCM.
-Usan `AuthService` y `MockClient` de prueba; producción usa Firebase Auth real.
+Las cinco pruebas backend nuevas comprueban la clave independiente del scheduler,
+ventana temporal, exclusión de canceladas/pasadas/lejanas, repetición normal sin
+duplicar, TTL, reintento ante fallo FCM, concurrencia real de dos peticiones y
+nombre académico de cancha. La prueba existente de cancelación ahora exige que
+una reserva en curso pueda cancelarse, conservando el rechazo a finalizadas.
+Los nuevos casos Flutter comprueban filtro por deporte, destino de recordatorio
+y cancelación en curso. Se conservaron los tests de auth, perfil, errores,
+paginación, disponibilidad, creación, pérdida de respuesta y cancelación.
 
-El backend incluye las pruebas originales de concurrencia/superposición y nuevas
-pruebas de dispositivos, propiedad, reasignación idempotente, token largo,
-notificación al propietario, cancelación sin duplicar avisos, fallo push sin perder
-reserva y limpieza de token inválido. Los tests del script de inicio comprueban
-que una migración o seed fallidos impiden llegar a Gunicorn. En Windows sin `sh`,
-sólo esos cuatro casos POSIX se omiten con una razón explícita; usar Git Bash/WSL
-para ejecutarlos. La suite completa de 80 casos se ejecutó aquí en Linux.
+El SDK se sustituye **sólo en las pruebas**. Se emitieron ocho advertencias de
+deprecación `Message.token` del Firebase Admin fijado, sin pruebas fallidas.
+FCM aceptado por un doble no se presenta como un mensaje entregado a un teléfono.
 
-Ambos workflows remotos terminaron con éxito para el commit funcional `8cc3eab`.
-El APK debug se compiló en GitHub Actions sin `google-services.json`, sin secretos
-Admin y sin configuración cliente real. Esto verifica compilación, no login o
-push reales. Los intentos de APK local encontraron límites de memoria y espacio
-al instalar el NDK; se redujo el heap Gradle y se movió el SDK al disco de trabajo.
-Se detuvo el intento local restante después de confirmar la compilación en CI.
-La suite backend emitió cuatro advertencias de deprecación de `Message.token`
-del SDK Firebase Admin fijado; no falló ninguna prueba.
+## Evidencia de la implementación anterior
 
-## Pendientes de servicios externos
+[Backend CI](https://github.com/NestorArakaki/ClubNestorArakaki/actions/runs/39132875111)
+y [Flutter CI](https://github.com/NestorArakaki/ClubNestorArakaki/actions/runs/39132875080)
+aprobaron el commit funcional anterior `8cc3eab`, incluido APK debug sin configuración
+Firebase real. Para el commit actual de código `4cadd6c`, ambos workflows también terminaron
+con éxito: [Backend](https://github.com/NestorArakaki/ClubNestorArakaki/actions/runs/39134442623)
+y [Flutter](https://github.com/NestorArakaki/ClubNestorArakaki/actions/runs/39134442583).
+El último incluye `flutter build apk --debug`, con el nuevo ícono y las
+correcciones de la auditoría. No incluye activación de Firebase/Render reales.
 
-- Crear/configurar Firebase, registrar `com.nestorarakaki.club`, habilitar
-  Email/Password, completar configuración cliente y cuenta Admin. Probar login,
-  persistencia y token real contra la API del mismo proyecto.
-- Verificar push real en primer plano, segundo plano, arranque al tocar aviso,
-  permiso denegado/concedido y rotación de token con Google Play Services.
-- Crear y desplegar los recursos **Free** de Render. Verificar `btree_gist`,
-  variables, salud HTTPS, cold start y vencimiento de PostgreSQL.
-- Ejecutar la checklist de [demostración](DEMO.md) en el emulador Windows.
-- Firma propia para distribución por tienda (la demo conserva firma debug).
+En la implementación anterior también se ejecutaron migraciones desde base vacía,
+precarga dos veces, arranque real con el script de Render/Gunicorn y salud,
+sedes, canchas, Swagger/OpenAPI con HTTP 200. Los intentos locales de APK tuvieron
+límites de memoria y espacio al instalar NDK; las herramientas Cloud se movieron
+al disco de trabajo. Son independientes de las herramientas ya instaladas en Windows.
 
-## Límites del alcance
+## Verificaciones personales pendientes
 
-Una franja de apertura por día, sin excepciones de feriados, pagos ni interfaz
-administrativa. Las reservas y cancelaciones se rigen por las reglas de la API.
-No hay claves de idempotencia para POST; ante respuesta perdida hay que consultar
-Mis reservas. El cliente bloquea el intento incierto en la pantalla de reserva.
-Los avisos son best effort después del commit, sin cola persistente ni
-recordatorios programados. Una caída posterior al commit puede perder un aviso.
-Las credenciales, permisos externos y la entrega de FCM real no fueron simulados
-ni se afirman verificados sin configuración del proyecto.
+- Configurar Firebase del mismo proyecto en Android/Admin y probar registro,
+  persistencia, recuperación de contraseña y verificación real de tokens.
+- Desplegar API/PostgreSQL en Render **Free**, comprobar `btree_gist`, migración,
+  seed, salud HTTPS y vigencia de la base.
+- Registrar un token FCM real en Pixel 7/Android 16, conceder permisos y comprobar
+  primer plano, segundo plano y apertura al tocar aviso.
+- Configurar la clave y las variables del workflow; colocarlo en la rama
+  predeterminada al integrar los PR. Mientras tanto, probar endpoint manualmente.
+- Comprobar entrega real del recordatorio de una reserva dentro de la próxima
+  hora, repetición sin reenvío normal y exclusión de una reserva cancelada.
+- Revisar apariencia del ícono, el prototipo navegable Figma y ejecutar DEMO.md.
+- Preparar los ZIP, subirlos a Blackboard y realizar la defensa individual.
+
+No se crearon servicios remotos, no se activó un cron real con secretos, no se
+fusionaron PR y no se afirma que la consigna esté cumplida en la nube hasta
+completar esas comprobaciones. Los límites de recordatorios y planes gratuitos
+están detallados en RECORDATORIOS.md y RENDER_FREE.md.

@@ -91,7 +91,7 @@ las pruebas y regenerar cada lista con `pip freeze` desde el entorno correspondi
   `CREATE` en la base. No se admite SQLite como sustituto.
 - Una cancelación marca `cancelled_at`, conserva historial y libera el intervalo
   al confirmar la transacción. Usa bloqueo de fila y es idempotente. Una reserva
-  iniciada no se cancela. Reservas ajenas y ausentes responden 404.
+  finalizada no se cancela; sí se admite cancelar una reserva en curso. Reservas ajenas y ausentes responden 404.
 - `GET /bookings` sólo devuelve las reservas de la identidad verificada. El
   propietario no puede especificarse en JSON. El email sólo se sincroniza desde
   los claims firmados de Firebase y no es editable mediante esta API.
@@ -176,3 +176,20 @@ Tiene prioridad sobre ADC. No guardar ese valor en Git ni en Flutter.
 registran por `/api/v1/devices` con identidad Firebase verificada. Consultar
 [el contrato](docs/API.md) para registro, baja y payloads. Las credenciales de
 servicio requieren permisos Auth de lectura y FCM de envío.
+
+
+## Cumplimiento académico y recordatorios
+
+La API expone `Court.full_name` como `name` de cada espacio: sede, dirección,
+tipo y número (ID), sin duplicar esos datos en la tabla. Flutter filtra por
+`Court.sport` dentro del catálogo de la sede ya descargado.
+
+La migración `1003_booking_reminders` agrega una marca persistente. El workflow
+externo consulta cada diez minutos un endpoint con clave privada para enviar FCM
+sobre turnos que empiezan en la próxima hora. Requiere `REMINDER_SCHEDULER_KEY`
+y `FCM_ENABLED=true`; no basta con los avisos al crear/cancelar. Seguir
+[RECORDATORIOS.md](../docs/RECORDATORIOS.md). La clave del scheduler no es un ID Token.
+
+[Modelo con entidades, atributos y relaciones](../docs/MODELO_DATOS.md),
+[matriz contra la consigna](../docs/MATRIZ_CUMPLIMIENTO_TP.md) y
+[guía de defensa del código real](../docs/GUIA_DEFENSA_TP.md).

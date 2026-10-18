@@ -10,6 +10,9 @@
 - [ ] Emulador con Google Play/Google APIs, conexión y hora correctas.
 - [ ] Cuenta Admin con permisos Auth y FCM; API FCM v1 habilitada y FCM_ENABLED=true.
 - [ ] Permisos Android concedidos mediante Activar avisos.
+- [ ] Recordatorios: REMINDER_SCHEDULER_KEY configurado; workflow activado en rama principal o llamada manual lista.
+- [ ] Ícono propio visible, filtro por deporte y nombres sede/dirección/tipo/número comprobados.
+- [ ] Modelo de datos y guía de defensa abiertos; ambos ZIP preparados para Blackboard.
 - [ ] Abrir salud antes de empezar para despertar Render Free.
 
 ## Flujo completo
@@ -43,3 +46,14 @@
   La reserva puede estar confirmada igualmente: consultar Mis reservas.
 - Si la fecha aparece desplazada, recordar que se muestran horarios de la sede,
   no la zona del teléfono. La fecha de disponibilidad pertenece a esa sede.
+
+
+## Evidencia específica del recordatorio
+
+Reservar una hora completa cuyo comienzo sea dentro de los próximos 60 minutos.
+Verificar que la reserva quede confirmada, poner Android en segundo plano e
+invocar el endpoint protegido o esperar el workflow. Tocar el push debe abrir
+la reserva correcta. Repetir la llamada: el contador `sent` ya no debe incluir
+esa reserva. Para probar un turno cancelado, cancelar antes de disparar el
+recordatorio y verificar que no se seleccione. Ver `RECORDATORIOS.md` para comandos.
+Una notificación inmediata al crear no reemplaza esta evidencia.

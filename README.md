@@ -15,6 +15,12 @@ del PR #1 del backend; su base de revisión es `feat/backend-reservas`.
 - [Despliegue Render Free](docs/RENDER_FREE.md)
 - [Verificación y límites](docs/VERIFICACION.md)
 - [Checklist para la demostración](docs/DEMO.md)
+- [Matriz de cumplimiento de la consigna](docs/MATRIZ_CUMPLIMIENTO_TP.md)
+- [Guía para defender el código](docs/GUIA_DEFENSA_TP.md)
+- [Modelo de datos](docs/MODELO_DATOS.md)
+- [Recordatorios próximos: activación gratuita](docs/RECORDATORIOS.md)
+- [Preparar los dos ZIP para Blackboard](docs/ENTREGA_TP.md)
+- [Compatibilidad con tu Windows existente](docs/COMPATIBILIDAD.md)
 
 ## Inicio rápido (PowerShell, desde la raíz)
 
@@ -49,4 +55,5 @@ existen únicamente en `test/`, nunca como modo de ejecución de la aplicación.
 
 El envío push es best effort: una falla de notificación no revierte una reserva,
 y Mis reservas es la fuente para comprobar el resultado si se pierde la conexión.
-La activación real requiere configuración y permisos externos; ver las guías.
+Los recordatorios de la próxima hora se disparan con GitHub Actions cada diez
+minutos; requieren activar el workflow y configurar su clave privada. Ver las guías.

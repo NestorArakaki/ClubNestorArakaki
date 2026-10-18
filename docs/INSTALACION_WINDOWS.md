@@ -1,4 +1,9 @@
-# Windows 11 y PowerShell: instalación y ejecución
+# Windows 11 y PowerShell: configuración y ejecución
+
+Tu Flutter 3.47.7, Dart 3.13.5, SDK API 36 y NDK 28.2.13676358 ya funcionan.
+No reinstalar ni actualizar herramientas por esta auditoría. Los pasos de instalación
+sólo aplican a una máquina nueva; en tu PC continuar con Firebase/backend.
+Ver [COMPATIBILIDAD.md](COMPATIBILIDAD.md).
 
 Comandos desde la raíz del repositorio, salvo indicación contraria. Se verificó
 el código con Flutter 3.47.7 / Dart 3.13.5 y Python 3.12.14. Android Studio debe
@@ -150,8 +155,10 @@ es el propio dispositivo. Para release, usar HTTPS de Render.
 
 No forzar la detención de la app en Ajustes para probar segundo plano: Android
 puede impedir mensajes hasta que vuelva a abrirse. Para la demo, usar Inicio o
-Recientes. El envío es best effort; no hay recordatorios programados ni cola
-persistente, y una reserva confirmada sigue siendo válida aunque falle FCM.
+Recientes. El envío es best effort y una reserva confirmada sigue siendo válida
+aunque falle FCM. Para los recordatorios de reservas próximas, activar el
+workflow siguiendo [RECORDATORIOS.md](RECORDATORIOS.md); no requiere otra
+instalación Android ni una cola persistente.
 
 ## 6. Usar Render y compilar Android
 

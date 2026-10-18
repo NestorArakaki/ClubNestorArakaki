@@ -42,6 +42,7 @@ No elegir Starter ni Basic. Revisar la pantalla de creación antes de confirmar.
 | `DATABASE_URL` | Internal Database URL de Render; Blueprint la vincula automáticamente |
 | `FIREBASE_PROJECT_ID` | ID real del mismo proyecto usado en Android |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | JSON privado completo de Firebase Admin, en una variable privada |
+| `REMINDER_SCHEDULER_KEY` | Clave privada aleatoria de al menos 32 caracteres para el programador externo |
 | `FCM_ENABLED` | `true` para activar los avisos; predeterminado `false` |
 | `CORS_ORIGINS` | Vacío para Android; para Web, sólo orígenes explícitos separados por coma |
 | `SEED_ON_START` | `true` si se quiere precargar antes de Gunicorn; `false` de forma predeterminada |
@@ -134,3 +135,13 @@ Según [Render Free](https://render.com/docs/free), consultado el 18/10/2026:
 
 Se cambió únicamente la configuración y el arranque. No se verificó un deploy
 real, porque requiere la cuenta Render y las credenciales del proyecto.
+
+
+## Recordatorios próximos sin Render Cron pago
+
+Se usa GitHub Actions en el repositorio público: una petición cada diez minutos
+a una ruta Flask protegida. No hay un daemon de reloj dentro de Render que se
+pierda al suspenderse. Activar sólo después del deploy y configurar la clave
+privada en ambos servicios según [RECORDATORIOS.md](RECORDATORIOS.md).
+El workflow necesita estar en la rama predeterminada para el disparo periódico;
+antes de integrar los PR se puede ejecutar el endpoint manualmente para la demo.
