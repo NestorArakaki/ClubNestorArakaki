@@ -1,0 +1,31 @@
+# Desde Render > New Blueprint, seleccionar backend/render.yaml.
+services:
+  - type: web
+    name: club-nestor-arakaki-api
+    runtime: python
+    plan: starter
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    preDeployCommand: flask --app wsgi db upgrade
+    startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 60 --access-logfile -
+    healthCheckPath: /api/v1/health
+    autoDeployTrigger: "off"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.14
+      - key: DATABASE_URL
+        fromDatabase:
+          name: club-nestor-arakaki-db
+          property: connectionString
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        value: /etc/secrets/firebase.json
+      - key: CORS_ORIGINS
+        sync: false
+databases:
+  - name: club-nestor-arakaki-db
+    plan: basic-256mb
+    databaseName: club
+    user: club
+    postgresMajorVersion: "16"
