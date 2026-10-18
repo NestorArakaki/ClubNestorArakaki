@@ -39,8 +39,9 @@ Se ejecutó en Linux Cloud con Python 3.12.14 y PostgreSQL 16 local descartable:
    recursos remotos. El script reemplaza el pre-deploy y no necesita Render Shell.
 3. **Android**: ejecutar la [checklist de demo](../../docs/DEMO.md) con Firebase
    configurado y comprobar el flujo completo en emulador/dispositivo.
-4. **GitHub Actions**: verificar sus ejecuciones remotas. Los resultados locales
-   no se presentan como pruebas de CI remoto aprobadas.
+Los workflows remotos de [Backend](https://github.com/NestorArakaki/ClubNestorArakaki/actions/runs/39132875111)
+y [Flutter](https://github.com/NestorArakaki/ClubNestorArakaki/actions/runs/39132875080)
+terminaron con éxito en `8cc3eab`; Flutter incluye compilación del APK debug sin credenciales.
 
 Límites: una apertura por día, sin feriados, administración, pagos ni idempotency
 keys. Los avisos se intentan después del commit, sin cola persistente y sin

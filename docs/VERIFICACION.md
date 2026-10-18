@@ -26,6 +26,9 @@ local descartable en Docker. No se usó SQLite ni credenciales Firebase reales.
 | HTTP real sobre Gunicorn | Salud, sedes, canchas, Swagger y OpenAPI: 200 |
 | OpenAPI | Incluye los endpoints autenticados de dispositivos; validado por pytest |
 | Git | Sin errores de whitespace |
+| APK debug (CI GitHub) | `flutter build apk --debug` aprobado, sin credenciales |
+| CI Backend | [Workflow exitoso](https://github.com/NestorArakaki/ClubNestorArakaki/actions/runs/39132875111) |
+| CI Flutter | [Workflow exitoso](https://github.com/NestorArakaki/ClubNestorArakaki/actions/runs/39132875080), incluye compilación Android |
 
 Las pruebas Flutter cubren validación de login/registro/recuperación, navegación
 según sesión, cierre de sesión, perfil, paginación, parseo UTF-8 y JSON, catálogo,
@@ -43,6 +46,15 @@ que una migración o seed fallidos impiden llegar a Gunicorn. En Windows sin `sh
 sólo esos cuatro casos POSIX se omiten con una razón explícita; usar Git Bash/WSL
 para ejecutarlos. La suite completa de 80 casos se ejecutó aquí en Linux.
 
+Ambos workflows remotos terminaron con éxito para el commit funcional `8cc3eab`.
+El APK debug se compiló en GitHub Actions sin `google-services.json`, sin secretos
+Admin y sin configuración cliente real. Esto verifica compilación, no login o
+push reales. Los intentos de APK local encontraron límites de memoria y espacio
+al instalar el NDK; se redujo el heap Gradle y se movió el SDK al disco de trabajo.
+Se detuvo el intento local restante después de confirmar la compilación en CI.
+La suite backend emitió cuatro advertencias de deprecación de `Message.token`
+del SDK Firebase Admin fijado; no falló ninguna prueba.
+
 ## Pendientes de servicios externos
 
 - Crear/configurar Firebase, registrar `com.nestorarakaki.club`, habilitar
@@ -53,8 +65,6 @@ para ejecutarlos. La suite completa de 80 casos se ejecutó aquí en Linux.
 - Crear y desplegar los recursos **Free** de Render. Verificar `btree_gist`,
   variables, salud HTTPS, cold start y vencimiento de PostgreSQL.
 - Ejecutar la checklist de [demostración](DEMO.md) en el emulador Windows.
-- Ejecutar GitHub Actions remoto. Se agregaron workflows, pero un resultado local
-  no se presenta como una ejecución exitosa de GitHub.
 - Firma propia para distribución por tienda (la demo conserva firma debug).
 
 ## Límites del alcance
