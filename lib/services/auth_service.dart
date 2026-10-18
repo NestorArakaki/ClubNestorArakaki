@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+
 import 'api_client.dart';
 
 abstract class AuthService {
@@ -24,8 +25,7 @@ String authMessage(FirebaseAuthException error) => switch (error.code) {
     'No se pudo conectar con Firebase. Revisá Internet.',
   'operation-not-allowed' =>
     'Habilitá Email/Password en Firebase Authentication.',
-  _ =>
-    'No se pudo completar la autenticación. Revisá la configuración de Firebase.',
+  _ => 'No se pudo completar la autenticación. Revisá la configuración de Firebase.',
 };
 
 class FirebaseAuthService implements AuthService {

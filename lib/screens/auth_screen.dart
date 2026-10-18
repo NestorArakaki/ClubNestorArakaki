@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../services/auth_service.dart';
 import '../services/formatters.dart';
 import '../widgets/async_view.dart';

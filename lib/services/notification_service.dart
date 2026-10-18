@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
 import 'api_client.dart';
 import 'auth_service.dart';
 import 'firebase_config.dart';
@@ -38,10 +40,16 @@ class NotificationService with WidgetsBindingObserver {
   final status = ValueNotifier<String>('Notificaciones sin activar.');
   final _local = FlutterLocalNotificationsPlugin();
   final _subscriptions = <StreamSubscription<dynamic>>[];
-  bool _initialized = false, _unlinking = false;
+  bool _initialized = false, _unlinking = false, _initializing = false;
   String? _registeredUid, _registeredToken;
 
   Future<void> initialize() async {
+    if (_initializing || _initialized) return;
+    _initializing = true;
+    for (final subscription in _subscriptions) {
+      await subscription.cancel();
+    }
+    _subscriptions.clear();
     try {
       const android = AndroidInitializationSettings('ic_stat_booking');
       await _local.initialize(
@@ -107,21 +115,28 @@ class NotificationService with WidgetsBindingObserver {
         }),
       );
       _subscriptions.add(
-        FirebaseMessaging.instance.onTokenRefresh.listen((_) {
-          unawaited(sync());
-        }),
+        FirebaseMessaging.instance.onTokenRefresh.listen(
+          (_) {
+            unawaited(sync());
+          },
+          onError: (Object _) {
+            status.value = 'No se pudo actualizar el token. Reintentá con “Activar avisos”.';
+          },
+        ),
       );
       final initial = await FirebaseMessaging.instance.getInitialMessage();
       if (initial != null) target.value = PushTarget.parse(initial.data);
       _initialized = true;
       WidgetsBinding.instance.addObserver(this);
     } catch (_) {
-      status.value =
-          'No se pudieron iniciar las notificaciones. Podés usar las reservas normalmente.';
+      status.value = 'No se pudieron iniciar las notificaciones. Podés usar las reservas normalmente.';
+    } finally {
+      _initializing = false;
     }
   }
 
   Future<void> sync({bool requestPermission = false}) async {
+    if (!_initialized && requestPermission) await initialize();
     if (!_initialized || _unlinking || auth.uid == null) return;
     final owner = auth.uid;
     try {
@@ -144,8 +159,7 @@ class NotificationService with WidgetsBindingObserver {
       }
       status.value = 'Dispositivo registrado para recibir avisos.';
     } catch (_) {
-      status.value =
-          'No se pudo registrar el dispositivo. Reintentá con “Activar avisos”.';
+      status.value = 'No se pudo registrar el dispositivo. Reintentá con “Activar avisos”.';
     }
   }
 

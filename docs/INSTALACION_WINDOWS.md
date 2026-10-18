@@ -43,8 +43,9 @@ si no se encuentra el comando, agregar `%LOCALAPPDATA%\Pub\Cache\bin` al PATH
    de la firma utilizada según la consola.
 
 El plugin Google Services ya está declarado y sólo se aplica si existe el JSON;
-por eso `flutter analyze` y `flutter test` no dependen de configuraciones privadas.
-Android mínimo: API 23 o el mínimo superior requerido por Flutter.
+Se usa Google Services 4.5.0, recomendado en la [guía oficial](https://firebase.google.com/docs/android/setup).
+Por eso `flutter analyze` y `flutter test` no dependen de configuraciones privadas.
+Android mínimo: API 24 o el mínimo superior requerido por Flutter.
 
 ## 3. FlutterFire y configuración cliente
 

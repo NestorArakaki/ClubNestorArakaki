@@ -1,6 +1,8 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+
 import 'services/api_client.dart';
 import 'services/auth_service.dart';
 import 'services/notification_service.dart';

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
+
 import '../models/models.dart';
 
 typedef TokenProvider = Future<String?> Function(bool forceRefresh);
@@ -134,14 +136,12 @@ class ApiClient {
   }) async {
     final items = <T>[];
     for (var page = 1; ; page++) {
-      final json =
-          await request(
-                'GET',
-                path,
-                authenticated: authenticated,
-                query: {...query, 'page': '$page', 'per_page': '100'},
-              )
-              as Json;
+      final json = await request(
+        'GET',
+        path,
+        authenticated: authenticated,
+        query: {...query, 'page': '$page', 'per_page': '100'},
+      ) as Json;
       final batch = json['items'] as List;
       items.addAll(batch.map((e) => parse(e as Json)));
       if (batch.isEmpty || items.length >= (json['total'] as int)) return items;
@@ -162,25 +162,23 @@ class ApiClient {
   Future<Availability> availability(int courtId, String date) async =>
       Availability.fromJson(
         await request(
-              'GET',
-              '/courts/$courtId/availability',
-              query: {'date': date},
-            )
-            as Json,
+          'GET',
+          '/courts/$courtId/availability',
+          query: {'date': date},
+        ) as Json,
       );
   Future<Booking> createBooking(int courtId, Slot slot, int duration) async =>
       Booking.fromJson(
         await request(
-              'POST',
-              '/bookings',
-              authenticated: true,
-              body: {
-                'court_id': courtId,
-                'starts_at': slot.startsAt.toUtc().toIso8601String(),
-                'duration_hours': duration,
-              },
-            )
-            as Json,
+          'POST',
+          '/bookings',
+          authenticated: true,
+          body: {
+            'court_id': courtId,
+            'starts_at': slot.startsAt.toUtc().toIso8601String(),
+            'duration_hours': duration,
+          },
+        ) as Json,
       );
   Future<List<Booking>> bookings(String period) => _all(
     '/bookings',

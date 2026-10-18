@@ -21,6 +21,8 @@ Contrato OpenAPI generado por las mismas rutas: `/openapi.json`; Swagger: `/docs
 | GET | `/bookings` | Bearer | 200 página de reservas propias |
 | GET | `/bookings/{id}` | Bearer | 200 reserva propia |
 | DELETE | `/bookings/{id}` | Bearer | 200 reserva cancelada |
+| POST | `/devices` | Bearer | 200 dispositivo registrado |
+| DELETE | `/devices` | Bearer | 200 dispositivo desvinculado |
 
 Listados paginados: `page` (desde 1, predeterminado 1) y `per_page`
 (1–100, predeterminado 20). Una página fuera de rango devuelve `items: []`.
@@ -222,11 +224,11 @@ No reintentar automáticamente un POST después de un error de red ambiguo: pued
 haberse confirmado. Primero consultar las reservas propias. La API no implementa
 claves de idempotencia; un segundo intento superpuesto confirmado recibe 409.
 
-## Flutter (integración posterior)
+## Flutter (cliente implementado)
 
-Agregar y configurar `firebase_core`, `firebase_auth` y un cliente HTTP en el
-proyecto Flutter cuando se implemente la integración. Ninguna dependencia Flutter
-fue modificada en este cambio. Ejemplo orientativo con `http`:
+El cliente [ApiClient](../../lib/services/api_client.dart) implementa este contrato
+con `http`, `firebase_core` y `firebase_auth`. La URL base se configura mediante
+`API_BASE_URL`. Ejemplo orientativo de la operación subyacente:
 
 ```dart
 final user = FirebaseAuth.instance.currentUser;

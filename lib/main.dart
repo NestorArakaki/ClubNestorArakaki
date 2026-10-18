@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:timezone/data/latest.dart' as tz;
+
 import 'app.dart';
 import 'services/api_client.dart';
 import 'services/auth_service.dart';
@@ -61,8 +62,7 @@ class _BootstrapState extends State<Bootstrap> {
     } catch (_) {
       if (mounted) {
         setState(() {
-          _error =
-              'No se pudo iniciar Firebase o la API. Configurá Android en Firebase y completá config/firebase.json siguiendo docs/INSTALACION_WINDOWS.md. La URL de la API debe terminar en /api/v1; producción requiere HTTPS. No uses credenciales Firebase Admin en Flutter.';
+          _error = 'No se pudo iniciar Firebase o la API. Configurá Android en Firebase y completá config/firebase.json siguiendo docs/INSTALACION_WINDOWS.md. La URL de la API debe terminar en /api/v1; producción requiere HTTPS. No uses credenciales Firebase Admin en Flutter.';
         });
       }
     }

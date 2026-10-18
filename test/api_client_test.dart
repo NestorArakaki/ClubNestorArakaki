@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -271,22 +272,19 @@ void main() {
       expect(calls, 3);
     },
   );
-  test(
-    'form validation rejects blank names, invalid email, short password and normalized bad dates',
-    () {
-      expect(requiredName('  '), isNotNull);
-      expect(requiredName('Ana'), isNull);
-      expect(emailValidator('bad'), isNotNull);
-      expect(emailValidator('ana@example.com'), isNull);
-      expect(passwordValidator('12345'), isNotNull);
-      expect(passwordValidator('123456'), isNull);
-      expect(birthValidator('2001-02-29'), isNotNull);
-      expect(birthValidator('2000-02-29'), isNull);
-      expect(birthValidator('1899-01-01'), isNotNull);
-      expect(birthValidator('2999-01-01'), isNotNull);
-      expect(birthValidator(''), isNull);
-    },
-  );
+  test('form validation rejects blank names, invalid email, short password and normalized bad dates', () {
+    expect(requiredName('  '), isNotNull);
+    expect(requiredName('Ana'), isNull);
+    expect(emailValidator('bad'), isNotNull);
+    expect(emailValidator('ana@example.com'), isNull);
+    expect(passwordValidator('12345'), isNotNull);
+    expect(passwordValidator('123456'), isNull);
+    expect(birthValidator('2001-02-29'), isNotNull);
+    expect(birthValidator('2000-02-29'), isNull);
+    expect(birthValidator('1899-01-01'), isNotNull);
+    expect(birthValidator('2999-01-01'), isNotNull);
+    expect(birthValidator(''), isNull);
+  });
   test('notification targets validate event and booking id', () {
     expect(
       PushTarget.parse({
@@ -313,77 +311,74 @@ void main() {
       42,
     );
   });
-  test(
-    'catalog, opening hours, availability and booking joins use documented paths',
-    () async {
-      final paths = <String>[];
-      final api = client((r) async {
-        paths.add(r.url.path);
-        switch (r.url.path) {
-          case '/api/v1/venues/1/courts':
-            return jsonResponse({
-              'items': [
-                {
-                  'id': 3,
-                  'venue_id': 1,
-                  'name': 'Tenis',
-                  'sport': 'tennis',
-                  'active': true,
-                },
-              ],
-              'total': 1,
-            });
-          case '/api/v1/venues/1/opening-hours':
-            return jsonResponse([
-              {'weekday': 0, 'open_hour': 8, 'close_hour': 24},
-            ]);
-          case '/api/v1/courts/3/availability':
-            expect(r.url.queryParameters['date'], '2035-12-20');
-            return jsonResponse({
-              'timezone': 'America/Argentina/Buenos_Aires',
-              'slots': [],
-            });
-          case '/api/v1/bookings':
-            expect(r.url.queryParameters['period'], 'past');
-            return jsonResponse({
-              'items': [
-                {
-                  'id': 42,
-                  'court_id': 3,
-                  'starts_at': '2020-12-20T12:00:00Z',
-                  'ends_at': '2020-12-20T13:00:00Z',
-                  'status': 'confirmed',
-                },
-              ],
-              'total': 1,
-            });
-          case '/api/v1/courts/3':
-            return jsonResponse({
-              'id': 3,
-              'venue_id': 1,
-              'name': 'Tenis',
-              'sport': 'tennis',
-              'active': false,
-            });
-          case '/api/v1/venues/1':
-            return jsonResponse({
-              'id': 1,
-              'name': 'Sede Test',
-              'address': 'Calle Test',
-              'timezone': 'America/Argentina/Buenos_Aires',
-            });
-          default:
-            fail('Unexpected contract path');
-        }
-      });
-      expect((await api.courts(1)).first.name, 'Tenis');
-      expect((await api.hours(1)).first.close, 24);
-      expect((await api.availability(3, '2035-12-20')).slots, isEmpty);
-      final info = (await api.bookingInfo('past')).single;
-      expect(info.court.active, false);
-      expect(info.venue.name, 'Sede Test');
-      expect(info.booking.canCancel, false);
-      expect(paths.length, 6);
-    },
-  );
+  test('catalog, opening hours, availability and booking joins use documented paths', () async {
+    final paths = <String>[];
+    final api = client((r) async {
+      paths.add(r.url.path);
+      switch (r.url.path) {
+        case '/api/v1/venues/1/courts':
+          return jsonResponse({
+            'items': [
+              {
+                'id': 3,
+                'venue_id': 1,
+                'name': 'Tenis',
+                'sport': 'tennis',
+                'active': true,
+              },
+            ],
+            'total': 1,
+          });
+        case '/api/v1/venues/1/opening-hours':
+          return jsonResponse([
+            {'weekday': 0, 'open_hour': 8, 'close_hour': 24},
+          ]);
+        case '/api/v1/courts/3/availability':
+          expect(r.url.queryParameters['date'], '2035-12-20');
+          return jsonResponse({
+            'timezone': 'America/Argentina/Buenos_Aires',
+            'slots': [],
+          });
+        case '/api/v1/bookings':
+          expect(r.url.queryParameters['period'], 'past');
+          return jsonResponse({
+            'items': [
+              {
+                'id': 42,
+                'court_id': 3,
+                'starts_at': '2020-12-20T12:00:00Z',
+                'ends_at': '2020-12-20T13:00:00Z',
+                'status': 'confirmed',
+              },
+            ],
+            'total': 1,
+          });
+        case '/api/v1/courts/3':
+          return jsonResponse({
+            'id': 3,
+            'venue_id': 1,
+            'name': 'Tenis',
+            'sport': 'tennis',
+            'active': false,
+          });
+        case '/api/v1/venues/1':
+          return jsonResponse({
+            'id': 1,
+            'name': 'Sede Test',
+            'address': 'Calle Test',
+            'timezone': 'America/Argentina/Buenos_Aires',
+          });
+        default:
+          fail('Unexpected contract path');
+      }
+    });
+    expect((await api.courts(1)).first.name, 'Tenis');
+    expect((await api.hours(1)).first.close, 24);
+    expect((await api.availability(3, '2035-12-20')).slots, isEmpty);
+    final info = (await api.bookingInfo('past')).single;
+    expect(info.court.active, false);
+    expect(info.venue.name, 'Sede Test');
+    expect(info.booking.canCancel, false);
+    expect(paths.length, 6);
+  });
 }
