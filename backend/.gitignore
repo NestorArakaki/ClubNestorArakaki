@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+credentials/
+*.pem
+*service-account*.json
+openapi.generated.json
