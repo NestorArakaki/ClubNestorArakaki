@@ -10,6 +10,7 @@ import 'package:club_nestor_arakaki/app.dart';
 import 'package:club_nestor_arakaki/models/models.dart';
 import 'package:club_nestor_arakaki/screens/availability_screen.dart';
 import 'package:club_nestor_arakaki/screens/bookings_screen.dart';
+import 'package:club_nestor_arakaki/screens/venues_screen.dart';
 import 'package:club_nestor_arakaki/services/api_client.dart';
 import 'package:club_nestor_arakaki/services/auth_service.dart';
 
@@ -317,4 +318,37 @@ void main() {
       },
     );
   }
+  testWidgets('sport filter shows only matching courts from the API', (
+    tester,
+  ) async {
+    final api = ApiClient(
+      baseUrl: 'http://localhost/api/v1',
+      tokenProvider: (_) async => null,
+      client: MockClient((r) async {
+        if (r.url.path.endsWith('/opening-hours')) return response([]);
+        return response({
+          'items': [
+            courtJson,
+            {...courtJson, 'id': 2, 'name': 'Tenis Test', 'sport': 'tennis'},
+          ],
+          'total': 2,
+        });
+      }),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: VenueScreen(api: api, venue: Venue.fromJson(venueJson)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Filtrar por deporte'));
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tenis').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Tenis Test'), findsOneWidget);
+    expect(find.text('Cancha Test'), findsNothing);
+    expect(find.text('Sede Test · Tenis'), findsOneWidget);
+    api.close();
+  });
 }

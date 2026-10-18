@@ -26,7 +26,7 @@ class VenueSchema(Schema):
 class CourtSchema(Schema):
     id = fields.Integer(dump_only=True)
     venue_id = fields.Integer()
-    name = fields.String()
+    name = fields.String(attribute="full_name")
     sport = fields.String()
     active = fields.Boolean()
 
@@ -161,3 +161,9 @@ class DeviceTokenSchema(Schema):
 
 class DeviceResultSchema(Schema):
     registered = fields.Boolean()
+
+
+class ReminderResultSchema(Schema):
+    checked = fields.Integer()
+    sent = fields.Integer()
+    pending = fields.Integer()

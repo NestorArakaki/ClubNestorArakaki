@@ -25,7 +25,11 @@ class PushTarget {
     if (id == null ||
         id <= 0 ||
         uid is! String ||
-        !['booking_created', 'booking_cancelled'].contains(data['type'])) {
+        ![
+          'booking_created',
+          'booking_cancelled',
+          'booking_reminder',
+        ].contains(data['type'])) {
       return null;
     }
     return PushTarget(id, uid);

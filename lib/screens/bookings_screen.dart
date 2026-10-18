@@ -162,7 +162,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                 child: Text(_busy ? 'Cancelando…' : 'Cancelar reserva'),
               ),
             if (!row.booking.canCancel && row.booking.status == 'confirmed')
-              const Text('La reserva ya comenzó y no se puede cancelar.'),
+              const Text('La reserva finalizó y no se puede cancelar.'),
           ],
         ),
       ),

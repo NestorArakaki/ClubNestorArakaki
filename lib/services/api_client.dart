@@ -111,7 +111,7 @@ class ApiClient {
         400: 'La solicitud contiene datos inválidos.',
         401: 'Tu sesión no es válida. Cerrá sesión e ingresá nuevamente.',
         404: 'El recurso solicitado ya no está disponible.',
-        409: 'El horario cambió o la reserva ya comenzó. Actualizá los datos.',
+        409: 'El horario cambió o la reserva finalizó. Actualizá los datos.',
         422: 'Revisá la fecha, el horario y los campos ingresados.',
         500: 'Ocurrió un error en el servidor. Reintentá más tarde.',
         503: 'El servicio no está disponible. Reintentá en un momento.',

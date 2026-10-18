@@ -23,6 +23,7 @@ from .schemas import (
     Pagination,
     ProfilePatchSchema,
     ProfileSchema,
+    ReminderResultSchema,
     VenuePageSchema,
     VenueSchema,
 )
@@ -256,3 +257,31 @@ class Devices(MethodView):
         )
         db.session.commit()
         return {"registered": False}
+
+
+@blp.route("/internal/booking-reminders")
+class BookingReminders(MethodView):
+    @blp.doc(security=[{"SchedulerKey": []}])
+    @blp.response(200, ReminderResultSchema)
+    @blp.alt_response(401, schema=ErrorSchema)
+    @blp.alt_response(503, schema=ErrorSchema)
+    def post(self):
+        """Programador externo: recordar reservas confirmadas que comienzan en la próxima hora."""
+        import hmac
+
+        from flask import current_app, request
+
+        from .errors import ApiError
+        from .notifications import send_upcoming_reminders
+
+        secret = current_app.config.get("REMINDER_SCHEDULER_KEY", "")
+        if len(secret) < 32:
+            raise ApiError(
+                503, "scheduler_unavailable", "Falta configurar la clave del programador."
+            )
+        supplied = request.headers.get("X-Scheduler-Key", "")
+        if not hmac.compare_digest(secret.encode(), supplied.encode()):
+            raise ApiError(401, "invalid_scheduler_key", "Programador no autorizado.")
+        if not current_app.config.get("FCM_ENABLED"):
+            raise ApiError(503, "fcm_unavailable", "Las notificaciones no están activadas.")
+        return send_upcoming_reminders()

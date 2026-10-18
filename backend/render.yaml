@@ -20,6 +20,8 @@ services:
         sync: false
       - key: FIREBASE_SERVICE_ACCOUNT_JSON
         sync: false
+      - key: REMINDER_SCHEDULER_KEY
+        sync: false
       - key: FCM_ENABLED
         value: "false"
       - key: SEED_ON_START

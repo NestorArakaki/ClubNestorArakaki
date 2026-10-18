@@ -381,4 +381,24 @@ void main() {
     expect(info.booking.canCancel, false);
     expect(paths.length, 6);
   });
+  test('upcoming notification opens a valid own-booking target', () {
+    final target = PushTarget.parse({
+      'type': 'booking_reminder',
+      'booking_id': '42',
+      'recipient_uid': 'alice',
+    });
+    expect(target!.bookingId, 42);
+    expect(target.uid, 'alice');
+  });
+  test('ongoing bookings can be cancelled', () {
+    final now = DateTime.now().toUtc();
+    final booking = Booking.fromJson({
+      'id': 1,
+      'court_id': 1,
+      'starts_at': now.subtract(const Duration(hours: 1)).toIso8601String(),
+      'ends_at': now.add(const Duration(hours: 1)).toIso8601String(),
+      'status': 'confirmed',
+    });
+    expect(booking.canCancel, true);
+  });
 }

@@ -35,6 +35,7 @@ def create_app(test_config=None):
         SQLALCHEMY_ENGINE_OPTIONS={"pool_pre_ping": True, "pool_size": 5, "max_overflow": 5},
         FIREBASE_PROJECT_ID=os.getenv("FIREBASE_PROJECT_ID", ""),
         FIREBASE_SERVICE_ACCOUNT_JSON=os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON", ""),
+        REMINDER_SCHEDULER_KEY=os.getenv("REMINDER_SCHEDULER_KEY", ""),
         FCM_ENABLED=os.getenv("FCM_ENABLED", "false").lower() == "true",
         API_TITLE="ClubNestorArakaki API",
         API_VERSION="1.0.0",
@@ -64,6 +65,9 @@ def create_app(test_config=None):
             "bearerFormat": "Firebase ID token",
             "description": "ID token obtenido con Firebase Auth en Flutter; no custom tokens.",
         },
+    )
+    api.spec.components.security_scheme(
+        "SchedulerKey", {"type": "apiKey", "in": "header", "name": "X-Scheduler-Key"}
     )
     from .routes import blp
 

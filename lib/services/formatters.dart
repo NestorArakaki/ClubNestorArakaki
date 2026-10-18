@@ -35,3 +35,12 @@ String? birthValidator(String? value) {
   }
   return null;
 }
+
+String sportLabel(String sport) => switch (sport) {
+  'football' => 'Fútbol',
+  'tennis' => 'Tenis',
+  'padel' => 'Paddle',
+  'basketball' => 'Básquet',
+  'multipurpose' => 'Multideporte',
+  _ => sport,
+};

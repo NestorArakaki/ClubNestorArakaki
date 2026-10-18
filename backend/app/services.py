@@ -126,8 +126,8 @@ def cancel_booking(user_id, booking_id):
         raise ApiError(404, "not_found", "La reserva solicitada no existe.")
     changed = booking.cancelled_at is None
     if changed:
-        if booking.starts_at <= utcnow():
-            raise ApiError(409, "booking_started", "No se puede cancelar una reserva ya iniciada.")
+        if booking.ends_at <= utcnow():
+            raise ApiError(409, "booking_finished", "No se puede cancelar una reserva finalizada.")
         booking.cancelled_at = utcnow()
     db.session.commit()
     if changed:

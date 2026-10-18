@@ -72,8 +72,7 @@ class Booking {
   final int id, courtId;
   final DateTime startsAt, endsAt;
   final String status;
-  bool get canCancel =>
-      status == 'confirmed' && startsAt.isAfter(DateTime.now());
+  bool get canCancel => status == 'confirmed' && endsAt.isAfter(DateTime.now());
 }
 
 class Profile {
