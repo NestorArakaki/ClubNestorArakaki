@@ -46,3 +46,16 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Configuración local y secretos (Firebase Admin nunca pertenece al cliente).
+.env
+.env.*
+!.env.example
+config/firebase.json
+**/google-services.json
+**/GoogleService-Info.plist
+**/*service-account*.json
+**/firebase-adminsdk*.json
+android/key.properties
+*.jks
+*.keystore
