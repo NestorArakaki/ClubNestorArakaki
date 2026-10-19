@@ -92,7 +92,14 @@ class ApiClient {
           network: true,
         );
       }
-      if (response.statusCode == 401 && authenticated && attempt == 0) continue;
+      // Sólo las consultas se reintentan con un token renovado. Las escrituras
+      // requieren una acción explícita del usuario, incluso ante un 401.
+      if (response.statusCode == 401 &&
+          authenticated &&
+          method == 'GET' &&
+          attempt == 0) {
+        continue;
+      }
       dynamic decoded;
       try {
         decoded = jsonDecode(utf8.decode(response.bodyBytes));

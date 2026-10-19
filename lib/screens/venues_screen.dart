@@ -4,6 +4,8 @@ import '../models/models.dart';
 import '../services/api_client.dart';
 import '../services/formatters.dart';
 import '../widgets/async_view.dart';
+import '../widgets/venue_card.dart';
+import '../widgets/empty_state.dart';
 import 'availability_screen.dart';
 
 class VenuesScreen extends StatelessWidget {
@@ -23,21 +25,18 @@ class VenuesScreen extends StatelessWidget {
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           if (venues.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(24),
-              child: Text('Todavía no hay sedes cargadas.'),
+            const EmptyState(
+              icon: Icons.stadium_outlined,
+              title: 'Todavía no hay sedes cargadas.',
+              message: 'Las sedes disponibles aparecerán acá.',
             ),
           for (final venue in venues)
-            Card(
-              child: ListTile(
-                title: Text(venue.name),
-                subtitle: Text(venue.address),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute<void>(
-                    builder: (_) => VenueScreen(api: api, venue: venue),
-                  ),
+            VenueCard(
+              venue: venue,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (_) => VenueScreen(api: api, venue: venue),
                 ),
               ),
             ),

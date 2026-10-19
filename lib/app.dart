@@ -10,7 +10,10 @@ import 'screens/auth_screen.dart';
 import 'screens/venues_screen.dart';
 import 'screens/bookings_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/dashboard_screen.dart';
+import 'theme.dart';
 import 'widgets/async_view.dart';
+import 'widgets/error_panel.dart';
 
 class ClubApp extends StatefulWidget {
   const ClubApp({
@@ -45,13 +48,7 @@ class _ClubAppState extends State<ClubApp> {
       locale: const Locale('es'),
       supportedLocales: const [Locale('es')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-        inputDecorationTheme: const InputDecorationTheme(
-          border: OutlineInputBorder(),
-        ),
-        useMaterial3: true,
-      ),
+      theme: clubTheme(),
       home: snapshot.hasError
           ? const Scaffold(
               body: Center(
@@ -113,18 +110,25 @@ class _HomeScreenState extends State<HomeScreen> {
     service!.target.value = null;
     if (destination.uid != widget.auth.uid) return;
     setState(() {
-      _tab = 1;
+      _tab = 2;
       _revision++;
     });
-    Navigator.push(
+    unawaited(_openPushDetail(destination.bookingId));
+  }
+
+  Future<void> _openPushDetail(int bookingId) async {
+    await Navigator.push(
       context,
       MaterialPageRoute<void>(
-        builder: (_) => BookingDetailScreen(
-          api: widget.api,
-          bookingId: destination.bookingId,
-        ),
+        builder: (_) =>
+            BookingDetailScreen(api: widget.api, bookingId: bookingId),
       ),
     );
+    if (mounted) {
+      setState(() {
+        _revision++;
+      });
+    }
   }
 
   Future<void> _logout() async {
@@ -135,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
       await widget.notifications?.unlink();
       await widget.auth.logout();
     } catch (e) {
-      if (mounted) showMessage(context, '$e');
+      if (mounted) showMessage(context, friendlyErrorMessage(e));
     } finally {
       if (mounted) {
         setState(() {
@@ -186,8 +190,16 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         Expanded(
           child: switch (_tab) {
-            0 => VenuesScreen(api: widget.api),
-            1 => BookingsScreen(key: ValueKey(_revision), api: widget.api),
+            0 => DashboardScreen(
+              key: ValueKey(_revision),
+              api: widget.api,
+              onExplore: () => setState(() {
+                _tab = 1;
+                _revision++;
+              }),
+            ),
+            1 => VenuesScreen(api: widget.api),
+            2 => BookingsScreen(key: ValueKey(_revision), api: widget.api),
             _ => ProfileScreen(api: widget.api),
           },
         ),
@@ -200,6 +212,11 @@ class _HomeScreenState extends State<HomeScreen> {
         _revision++;
       }),
       destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home),
+          label: 'Inicio',
+        ),
         NavigationDestination(icon: Icon(Icons.stadium), label: 'Sedes'),
         NavigationDestination(
           icon: Icon(Icons.calendar_month),

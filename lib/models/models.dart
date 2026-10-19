@@ -62,6 +62,8 @@ class Availability {
   }
 }
 
+enum BookingPhase { upcoming, inProgress, finished, cancelled }
+
 class Booking {
   Booking.fromJson(Json j)
     : id = j['id'] as int,
@@ -72,7 +74,17 @@ class Booking {
   final int id, courtId;
   final DateTime startsAt, endsAt;
   final String status;
-  bool get canCancel => status == 'confirmed' && endsAt.isAfter(DateTime.now());
+  bool isUpcomingAt(DateTime now) =>
+      status == 'confirmed' && endsAt.isAfter(now);
+  BookingPhase phaseAt(DateTime now) {
+    if (status == 'cancelled') return BookingPhase.cancelled;
+    if (!endsAt.isAfter(now)) return BookingPhase.finished;
+    return startsAt.isAfter(now)
+        ? BookingPhase.upcoming
+        : BookingPhase.inProgress;
+  }
+
+  bool get canCancel => isUpcomingAt(DateTime.now());
 }
 
 class Profile {

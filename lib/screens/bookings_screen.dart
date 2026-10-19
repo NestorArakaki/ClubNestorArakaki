@@ -4,6 +4,9 @@ import '../models/models.dart';
 import '../services/api_client.dart';
 import '../services/formatters.dart';
 import '../widgets/async_view.dart';
+import '../widgets/booking_card.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/error_panel.dart';
 
 class BookingsScreen extends StatefulWidget {
   const BookingsScreen({super.key, required this.api});
@@ -33,28 +36,42 @@ class _BookingsScreenState extends State<BookingsScreen> {
       ),
       Expanded(
         child: AsyncView<List<BookingInfo>>(
-          key: ValueKey('$_period-$_revision'),
-          load: () => widget.api.bookingInfo(_period),
-          builder: (rows, refresh) => RefreshIndicator(
-            onRefresh: refresh,
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              children: [
-                if (rows.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Text('No hay reservas en este período.'),
-                  ),
-                for (final row in rows)
-                  Card(
-                    child: ListTile(
-                      title: Text('${row.venue.name} · ${row.court.name}'),
-                      subtitle: Text(
-                        '${venueTime(row.booking.startsAt, row.venue.timezone)}\nHasta ${venueTime(row.booking.endsAt, row.venue.timezone)}\n${row.booking.status == 'cancelled' ? 'Cancelada' : 'Confirmada'} · #${row.booking.id}',
-                      ),
-                      isThreeLine: true,
-                      trailing: const Icon(Icons.chevron_right),
+          key: ValueKey(_revision),
+          load: () => widget.api.bookingInfo('all'),
+          builder: (allRows, refresh) {
+            final now = DateTime.now();
+            final rows =
+                allRows
+                    .where(
+                      (row) =>
+                          row.booking.isUpcomingAt(now) ==
+                          (_period == 'future'),
+                    )
+                    .toList()
+                  ..sort(
+                    (a, b) => _period == 'future'
+                        ? a.booking.startsAt.compareTo(b.booking.startsAt)
+                        : b.booking.endsAt.compareTo(a.booking.endsAt),
+                  );
+            return RefreshIndicator(
+              onRefresh: refresh,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                children: [
+                  if (rows.isEmpty)
+                    EmptyState(
+                      icon: _period == 'future'
+                          ? Icons.event_available
+                          : Icons.history,
+                      title: 'No hay reservas en este período.',
+                      message: _period == 'future'
+                          ? 'Tus próximos turnos aparecerán acá cuando reserves una cancha.'
+                          : 'Acá verás tus reservas finalizadas y canceladas.',
+                    ),
+                  for (final row in rows)
+                    BookingCard(
+                      row: row,
                       onTap: () async {
                         await Navigator.push(
                           context,
@@ -72,10 +89,10 @@ class _BookingsScreenState extends State<BookingsScreen> {
                         }
                       },
                     ),
-                  ),
-              ],
-            ),
-          ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     ],
@@ -118,7 +135,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       await widget.api.cancel(widget.bookingId);
       if (mounted) showMessage(context, 'Reserva cancelada.');
     } catch (e) {
-      if (mounted) showMessage(context, '$e');
+      if (mounted) showMessage(context, friendlyErrorMessage(e));
     } finally {
       if (mounted) {
         setState(() {
@@ -145,16 +162,20 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             Text(row.venue.address),
-            Text('${row.court.name} · ${row.court.sport}'),
+            Text('${row.court.name} · ${sportLabel(row.court.sport)}'),
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: BookingStatusBadge(
+                phase: row.booking.phaseAt(DateTime.now()),
+              ),
+            ),
             const SizedBox(height: 16),
             Text(
               'Inicio: ${venueTime(row.booking.startsAt, row.venue.timezone)}',
             ),
             Text('Fin: ${venueTime(row.booking.endsAt, row.venue.timezone)}'),
             Text('Zona: ${row.venue.timezone}'),
-            Text(
-              'Estado: ${row.booking.status == 'cancelled' ? 'Cancelada' : 'Confirmada'}',
-            ),
             const SizedBox(height: 24),
             if (row.booking.canCancel)
               FilledButton(

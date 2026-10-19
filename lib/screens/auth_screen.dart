@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/formatters.dart';
 import '../widgets/async_view.dart';
+import '../widgets/error_panel.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key, required this.auth});
@@ -59,7 +60,7 @@ class _AuthScreenState extends State<AuthScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = '$e';
+          _error = friendlyErrorMessage(e);
         });
       }
     } finally {
@@ -82,6 +83,7 @@ class _AuthScreenState extends State<AuthScreen> {
           child: AutofillGroup(
             child: Form(
               key: _form,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -135,7 +137,9 @@ class _AuthScreenState extends State<AuthScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Repetir contraseña',
                       ),
-                      validator: (value) => value == _password.text
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Repetí tu contraseña.'
+                          : value == _password.text
                           ? null
                           : 'Las contraseñas no coinciden.',
                     ),
@@ -143,12 +147,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   if (_error != null)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Text(
-                        _error!,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                      ),
+                      child: FormErrorMessage(message: _error!),
                     ),
                   const SizedBox(height: 24),
                   FilledButton(

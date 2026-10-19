@@ -4,6 +4,7 @@ import '../models/models.dart';
 import '../services/api_client.dart';
 import '../services/formatters.dart';
 import '../widgets/async_view.dart';
+import '../widgets/error_panel.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key, required this.api});
@@ -61,7 +62,7 @@ class _ProfileFormState extends State<ProfileForm> {
         showMessage(context, 'Perfil actualizado.');
       }
     } catch (e) {
-      if (mounted) showMessage(context, '$e');
+      if (mounted) showMessage(context, friendlyErrorMessage(e));
     } finally {
       if (mounted) {
         setState(() {

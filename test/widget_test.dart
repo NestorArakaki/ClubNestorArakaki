@@ -125,6 +125,9 @@ void main() {
       );
       await tester.tap(find.text('Ingresar'));
       await tester.pumpAndSettle();
+      expect(find.text('Hola, Ana'), findsOneWidget);
+      await tester.tap(find.text('Sedes'));
+      await tester.pumpAndSettle();
       expect(find.text('Sede Test'), findsOneWidget);
       await tester.tap(find.text('Mis reservas'));
       await tester.pumpAndSettle();
@@ -271,7 +274,7 @@ void main() {
     await tester.tap(find.text('Confirmar'));
     await tester.pumpAndSettle();
     expect(cancelled, true);
-    expect(find.text('Estado: Cancelada'), findsOneWidget);
+    expect(find.text('Cancelada'), findsOneWidget);
     api.close();
   });
   for (final ambiguous in [false, true]) {

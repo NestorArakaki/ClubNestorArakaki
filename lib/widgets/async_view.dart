@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'error_panel.dart';
+
 class AsyncView<T> extends StatefulWidget {
   const AsyncView({super.key, required this.load, required this.builder});
   final Future<T> Function() load;
@@ -13,11 +15,11 @@ class _AsyncViewState<T> extends State<AsyncView<T>> {
   @override
   void initState() {
     super.initState();
-    _future = widget.load();
+    _future = Future.sync(widget.load);
   }
 
   Future<void> _refresh() async {
-    final next = widget.load();
+    final next = Future.sync(widget.load);
     setState(() {
       _future = next;
     });
@@ -33,25 +35,14 @@ class _AsyncViewState<T> extends State<AsyncView<T>> {
     future: _future,
     builder: (context, snapshot) {
       if (snapshot.connectionState != ConnectionState.done) {
-        return const Center(child: CircularProgressIndicator());
-      }
-      if (snapshot.hasError) {
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('${snapshot.error}', textAlign: TextAlign.center),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: _refresh,
-                  child: const Text('Reintentar'),
-                ),
-              ],
-            ),
+        return const Center(
+          child: CircularProgressIndicator(
+            semanticsLabel: 'Cargando información',
           ),
         );
+      }
+      if (snapshot.hasError) {
+        return ErrorPanel(error: snapshot.error, onRetry: _refresh);
       }
       return widget.builder(snapshot.data as T, _refresh);
     },

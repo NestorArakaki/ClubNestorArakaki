@@ -4,6 +4,7 @@ import '../models/models.dart';
 import '../services/api_client.dart';
 import '../services/formatters.dart';
 import '../widgets/async_view.dart';
+import '../widgets/empty_state.dart';
 
 class AvailabilityScreen extends StatefulWidget {
   const AvailabilityScreen({
@@ -228,11 +229,16 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                     'Horarios de la sede. Los turnos ocupados o pasados están deshabilitados.',
                   ),
                   if (data.slots.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Text(
-                        'La sede está cerrada o la cancha no tiene turnos para esta fecha.',
-                      ),
+                    const EmptyState(
+                      icon: Icons.event_busy,
+                      title: 'No hay horarios disponibles',
+                      message: 'La sede está cerrada o la cancha no tiene turnos para esta fecha. Probá con otra fecha.',
+                    ),
+                  if (data.slots.isNotEmpty && !data.slots.any(_isAvailable))
+                    const EmptyState(
+                      icon: Icons.event_busy,
+                      title: 'No hay horarios disponibles',
+                      message: 'Los turnos de esta fecha están ocupados o ya pasaron. Probá con otra fecha.',
                     ),
                   const Text(
                     'Marcá bloques consecutivos. Al desmarcar uno intermedio, '
