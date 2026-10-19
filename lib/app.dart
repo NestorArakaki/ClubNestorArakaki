@@ -162,20 +162,26 @@ class _HomeScreenState extends State<HomeScreen> {
         if (widget.notifications != null && _tab == 0)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ValueListenableBuilder<String>(
-                    valueListenable: widget.notifications!.status,
-                    builder: (_, status, child) => Text(status),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () =>
-                      widget.notifications!.sync(requestPermission: true),
-                  child: const Text('Activar avisos'),
-                ),
-              ],
+            child: ValueListenableBuilder<NotificationStatus>(
+              valueListenable: widget.notifications!.status,
+              builder: (_, status, child) => Row(
+                children: [
+                  Expanded(child: Text(status.message)),
+                  if (status.phase != NotificationPhase.enabled)
+                    TextButton(
+                      onPressed: status.phase == NotificationPhase.checking
+                          ? null
+                          : () => widget.notifications!.sync(
+                              requestPermission: true,
+                            ),
+                      child: Text(switch (status.phase) {
+                        NotificationPhase.error => 'Reintentar',
+                        NotificationPhase.checking => 'Comprobando…',
+                        _ => 'Activar avisos',
+                      }),
+                    ),
+                ],
+              ),
             ),
           ),
         Expanded(

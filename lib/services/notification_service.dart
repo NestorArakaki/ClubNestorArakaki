@@ -36,19 +36,53 @@ class PushTarget {
   }
 }
 
+enum NotificationPhase {
+  inactive,
+  checking,
+  permissionRequired,
+  enabled,
+  error,
+}
+
+class NotificationStatus {
+  const NotificationStatus(this.phase, this.message);
+  final NotificationPhase phase;
+  final String message;
+}
+
 class NotificationService with WidgetsBindingObserver {
-  NotificationService(this.auth, this.api);
+  NotificationService(
+    this.auth,
+    this.api, {
+    FirebaseMessaging? messaging,
+    FlutterLocalNotificationsPlugin? localNotifications,
+  }) : _firebaseMessaging = messaging,
+       _local = localNotifications ?? FlutterLocalNotificationsPlugin();
   final AuthService auth;
   final ApiClient api;
   final target = ValueNotifier<PushTarget?>(null);
-  final status = ValueNotifier<String>('Notificaciones sin activar.');
-  final _local = FlutterLocalNotificationsPlugin();
+  final status = ValueNotifier<NotificationStatus>(
+    const NotificationStatus(
+      NotificationPhase.inactive,
+      'Notificaciones sin activar.',
+    ),
+  );
+  final FirebaseMessaging? _firebaseMessaging;
+  FirebaseMessaging get _messaging =>
+      _firebaseMessaging ?? FirebaseMessaging.instance;
+  final FlutterLocalNotificationsPlugin _local;
   final _subscriptions = <StreamSubscription<dynamic>>[];
   bool _initialized = false, _unlinking = false, _initializing = false;
+  bool _syncing = false, _syncAgain = false, _disposed = false;
+  int _sessionRevision = 0;
   String? _registeredUid, _registeredToken;
 
+  void _setStatus(NotificationPhase phase, String message) {
+    if (!_disposed) status.value = NotificationStatus(phase, message);
+  }
+
   Future<void> initialize() async {
-    if (_initializing || _initialized) return;
+    if (_initializing || _initialized || _disposed) return;
     _initializing = true;
     for (final subscription in _subscriptions) {
       await subscription.cancel();
@@ -119,59 +153,110 @@ class NotificationService with WidgetsBindingObserver {
         }),
       );
       _subscriptions.add(
-        FirebaseMessaging.instance.onTokenRefresh.listen(
+        _messaging.onTokenRefresh.listen(
           (_) {
-            unawaited(sync());
+            if (_syncing) {
+              _syncAgain = true;
+            } else {
+              unawaited(sync());
+            }
           },
           onError: (Object _) {
-            status.value = 'No se pudo actualizar el token. Reintentá con “Activar avisos”.';
+            _setStatus(
+              NotificationPhase.error,
+              'No se pudo actualizar el token. Reintentá activar los avisos.',
+            );
           },
         ),
       );
-      final initial = await FirebaseMessaging.instance.getInitialMessage();
+      final initial = await _messaging.getInitialMessage();
+      if (_disposed) return;
       if (initial != null) target.value = PushTarget.parse(initial.data);
       _initialized = true;
       WidgetsBinding.instance.addObserver(this);
     } catch (_) {
-      status.value = 'No se pudieron iniciar las notificaciones. Podés usar las reservas normalmente.';
+      _setStatus(
+        NotificationPhase.error,
+        'No se pudieron iniciar las notificaciones. Podés usar las reservas normalmente.',
+      );
     } finally {
       _initializing = false;
     }
   }
 
   Future<void> sync({bool requestPermission = false}) async {
-    if (!_initialized && requestPermission) await initialize();
-    if (!_initialized || _unlinking || auth.uid == null) return;
+    if (_syncing || _unlinking || _disposed) return;
     final owner = auth.uid;
+    if (owner == null) return;
+    final revision = _sessionRevision;
+    bool isCurrent() =>
+        !_disposed &&
+        !_unlinking &&
+        auth.uid == owner &&
+        revision == _sessionRevision;
+    _syncing = true;
     try {
+      if (_initialized || requestPermission) {
+        _setStatus(
+          NotificationPhase.checking,
+          'Comprobando permisos y registro de notificaciones…',
+        );
+      }
+      if (!_initialized && requestPermission) await initialize();
+      if (!_initialized || !isCurrent()) return;
       final settings = requestPermission
-          ? await FirebaseMessaging.instance.requestPermission()
-          : await FirebaseMessaging.instance.getNotificationSettings();
+          ? await _messaging.requestPermission()
+          : await _messaging.getNotificationSettings();
+      if (!isCurrent()) return;
       if (settings.authorizationStatus != AuthorizationStatus.authorized &&
           settings.authorizationStatus != AuthorizationStatus.provisional) {
-        status.value =
-            'Activá los permisos de notificaciones para recibir avisos.';
+        _setStatus(
+          NotificationPhase.permissionRequired,
+          'Activá los permisos de notificaciones. Si Android no vuelve a pedirlos, habilitalos en Ajustes y volvé a la app.',
+        );
         return;
       }
-      final token = await FirebaseMessaging.instance.getToken();
-      if (token == null || auth.uid != owner) return;
+      final token = await _messaging.getToken();
+      if (!isCurrent()) return;
+      if (token == null || token.isEmpty) {
+        _setStatus(
+          NotificationPhase.error,
+          'No se pudo obtener el token del dispositivo. Reintentá activar los avisos.',
+        );
+        return;
+      }
       if (_registeredToken != token || _registeredUid != owner) {
         await api.registerDevice(token);
-        if (auth.uid != owner) return;
+        if (!isCurrent()) return;
         _registeredToken = token;
         _registeredUid = owner;
       }
-      status.value = 'Dispositivo registrado para recibir avisos.';
+      // Habilitación verificada; no confirma la entrega de ningún mensaje.
+      _setStatus(NotificationPhase.enabled, 'Notificaciones activadas');
     } catch (_) {
-      status.value = 'No se pudo registrar el dispositivo. Reintentá con “Activar avisos”.';
+      if (isCurrent()) {
+        _setStatus(
+          NotificationPhase.error,
+          'No se pudo registrar el dispositivo. Reintentá activar los avisos.',
+        );
+      }
+    } finally {
+      _syncing = false;
+      if (_syncAgain && !_disposed) {
+        _syncAgain = false;
+        unawaited(sync());
+      }
     }
   }
 
   Future<void> unlink() async {
     _unlinking = true;
+    _sessionRevision++;
+    _syncAgain = false;
+    _setStatus(NotificationPhase.inactive, 'Notificaciones sin activar.');
     // Logout sigue disponible aun si la API está caída. Se invalida el token en FCM.
     try {
-      final token = await FirebaseMessaging.instance.getToken().timeout(
+      final token = await _messaging.getToken().timeout(
         const Duration(seconds: 5),
       );
       if (token != null) {
@@ -181,9 +266,7 @@ class NotificationService with WidgetsBindingObserver {
       /* Se intenta invalidar también el registro del proveedor. */
     }
     try {
-      await FirebaseMessaging.instance.deleteToken().timeout(
-        const Duration(seconds: 5),
-      );
+      await _messaging.deleteToken().timeout(const Duration(seconds: 5));
     } catch (_) {}
     try {
       await _local.cancelAll();
@@ -196,10 +279,17 @@ class NotificationService with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) unawaited(sync());
+    if (state == AppLifecycleState.resumed) {
+      if (_syncing) {
+        _syncAgain = true;
+      } else {
+        unawaited(sync());
+      }
+    }
   }
 
   Future<void> dispose() async {
+    _disposed = true;
     WidgetsBinding.instance.removeObserver(this);
     for (final subscription in _subscriptions) {
       await subscription.cancel();
