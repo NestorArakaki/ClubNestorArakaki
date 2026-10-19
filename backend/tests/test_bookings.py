@@ -148,10 +148,12 @@ def test_past_future_and_started_cancellation(app, client, authenticated, bookin
     assert {item["id"] for item in future["items"]} == {booking["id"], started_id}
     past = client.get(f"{API}/bookings?period=past", headers=authenticated()).json
     assert [item["id"] for item in past["items"]] == [past_id]
-    for item_id in (past_id, started_id):
-        result = client.delete(f"{API}/bookings/{item_id}", headers=authenticated())
-        assert result.status_code == 409
-        assert result.json["error"]["code"] == "booking_started"
+    result = client.delete(f"{API}/bookings/{past_id}", headers=authenticated())
+    assert result.status_code == 409
+    assert result.json["error"]["code"] == "booking_finished"
+    result = client.delete(f"{API}/bookings/{started_id}", headers=authenticated())
+    assert result.status_code == 200
+    assert result.json["status"] == "cancelled"
 
 
 def test_database_rejects_overlap_without_api(app, client, authenticated, booking_data):

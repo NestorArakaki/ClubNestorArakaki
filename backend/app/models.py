@@ -1,3 +1,5 @@
+import re
+import unicodedata
 from datetime import date, datetime
 
 import sqlalchemy as sa
@@ -42,6 +44,25 @@ class Court(db.Model):
     active: Mapped[bool] = mapped_column(default=True, server_default=sa.true())
     __table_args__ = (sa.UniqueConstraint("venue_id", "name"),)
 
+    @property
+    def full_name(self):
+        # No duplicamos dirección/sede en la tabla: el nombre académico se deriva.
+        venue = db.session.get(Venue, self.venue_id)
+        sport = {
+            "football": "Futbol",
+            "tennis": "Tenis",
+            "padel": "Paddle",
+            "basketball": "Basquet",
+            "multipurpose": "Multideporte",
+        }.get(self.sport, self.sport)
+        parts = [venue.name, venue.address, sport, str(self.id)]
+
+        def clean(value):
+            ascii_value = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode()
+            return re.sub(r"[^A-Za-z0-9]+", "_", ascii_value).strip("_")
+
+        return "_".join(clean(value) for value in parts)
+
 
 class User(db.Model):
     __tablename__ = "users"
@@ -63,6 +84,7 @@ class Booking(db.Model):
     court_id: Mapped[int] = mapped_column(sa.ForeignKey("courts.id"))
     starts_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
     ends_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
+    reminder_sent_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
     cancelled_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), server_default=sa.func.now()
@@ -87,3 +109,14 @@ class Booking(db.Model):
     @property
     def status(self):
         return "cancelled" if self.cancelled_at else "confirmed"
+
+
+class Device(db.Model):
+    __tablename__ = "devices"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(sa.ForeignKey("users.id"), index=True)
+    token: Mapped[str] = mapped_column(sa.String(4096))
+    token_hash: Mapped[str] = mapped_column(sa.String(64), unique=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), server_default=sa.func.now()
+    )

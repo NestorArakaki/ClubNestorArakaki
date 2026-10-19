@@ -91,7 +91,7 @@ las pruebas y regenerar cada lista con `pip freeze` desde el entorno correspondi
   `CREATE` en la base. No se admite SQLite como sustituto.
 - Una cancelación marca `cancelled_at`, conserva historial y libera el intervalo
   al confirmar la transacción. Usa bloqueo de fila y es idempotente. Una reserva
-  iniciada no se cancela. Reservas ajenas y ausentes responden 404.
+  finalizada no se cancela; sí se admite cancelar una reserva en curso. Reservas ajenas y ausentes responden 404.
 - `GET /bookings` sólo devuelve las reservas de la identidad verificada. El
   propietario no puede especificarse en JSON. El email sólo se sincroniza desde
   los claims firmados de Firebase y no es editable mediante esta API.
@@ -159,30 +159,37 @@ bandera de autenticación falsa disponible en producción.
 Ver [docs/VERIFICATION.md](docs/VERIFICATION.md) para los resultados y pendientes
 de esta implementación. El flujo CI está en `.github/workflows/backend.yml`.
 
-## Render
+## Render Free y Flutter
 
-El Blueprint [render.yaml](render.yaml) crea PostgreSQL 16 y un Web Service Python.
-Usa planes pagos para contar con `preDeployCommand`; revisar los costos en Render.
+La aplicación Flutter ya consume este contrato. Instrucciones completas para
+Windows, Firebase y Android en [la guía de instalación](../docs/INSTALACION_WINDOWS.md).
 
-1. Crear un Blueprint desde el repositorio y seleccionar la ruta
-   `backend/render.yaml` (o ingresar esa ruta en **Blueprint Path**).
-2. Completar `FIREBASE_PROJECT_ID` y `CORS_ORIGINS`. Para uso móvil exclusivo,
-   dejar `CORS_ORIGINS` vacío.
-3. Agregar un **Secret File** llamado `firebase.json` con la cuenta de servicio
-   del proyecto. Render lo monta en `/etc/secrets/firebase.json`, la ruta ya
-   configurada en el Blueprint. No pegar credenciales en archivos del repositorio.
-4. Desplegar. El build instala `requirements.txt`, el paso previo ejecuta
-   `flask --app wsgi db upgrade` y Gunicorn inicia la API. El despliegue automático
-   está desactivado; no se publica nada por crear este PR.
-5. Desde Render Shell, ejecutar `flask --app wsgi seed --file seed_data.json`
-   sólo si se desean datos de demostración; usar un archivo propio para datos reales.
-6. Comprobar `/api/v1/health`, `/docs` y luego una operación autenticada con un
-   ID token del proyecto. La salud comprueba PostgreSQL, no las credenciales Firebase.
+El Blueprint [render.yaml](render.yaml) utiliza Web Service Free y PostgreSQL Free.
+El comando `sh scripts/start.sh` ejecuta migraciones con lock transaccional,
+precarga opcional idempotente (`SEED_ON_START=true`) y sólo después inicia Gunicorn.
+No usa pre-deploy ni Render Shell. [Despliegue completo y límites](../docs/RENDER_FREE.md).
 
-Si se configura manualmente: Root Directory `backend`, build
-`pip install -r requirements.txt`, pre-deploy `flask --app wsgi db upgrade`, start
-igual a `startCommand` del Blueprint. Usar la URL interna de PostgreSQL; para
-conexiones externas, seguir los requisitos TLS del proveedor (`sslmode=require`
-cuando corresponda). Con dos workers el pool admite hasta 20 conexiones; mantener
-la suma por debajo del límite del plan de PostgreSQL. No ejecutar migraciones
-desde cada worker ni precargar Firebase antes de hacer fork.
+Además de ADC/`GOOGLE_APPLICATION_CREDENTIALS`, se admite
+`FIREBASE_SERVICE_ACCOUNT_JSON` como variable privada con el JSON completo.
+Tiene prioridad sobre ADC. No guardar ese valor en Git ni en Flutter.
+`FCM_ENABLED=true` activa avisos best effort después del commit; los tokens se
+registran por `/api/v1/devices` con identidad Firebase verificada. Consultar
+[el contrato](docs/API.md) para registro, baja y payloads. Las credenciales de
+servicio requieren permisos Auth de lectura y FCM de envío.
+
+
+## Cumplimiento académico y recordatorios
+
+La API expone `Court.full_name` como `name` de cada espacio: sede, dirección,
+tipo y número (ID), sin duplicar esos datos en la tabla. Flutter filtra por
+`Court.sport` dentro del catálogo de la sede ya descargado.
+
+La migración `1003_booking_reminders` agrega una marca persistente. El workflow
+externo consulta cada diez minutos un endpoint con clave privada para enviar FCM
+sobre turnos que empiezan en la próxima hora. Requiere `REMINDER_SCHEDULER_KEY`
+y `FCM_ENABLED=true`; no basta con los avisos al crear/cancelar. Seguir
+[RECORDATORIOS.md](../docs/RECORDATORIOS.md). La clave del scheduler no es un ID Token.
+
+[Modelo con entidades, atributos y relaciones](../docs/MODELO_DATOS.md),
+[matriz contra la consigna](../docs/MATRIZ_CUMPLIMIENTO_TP.md) y
+[guía de defensa del código real](../docs/GUIA_DEFENSA_TP.md).
