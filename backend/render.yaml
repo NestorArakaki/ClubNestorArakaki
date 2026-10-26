@@ -3,11 +3,10 @@ services:
   - type: web
     name: club-nestor-arakaki-api
     runtime: python
-    plan: starter
+    plan: free
     rootDir: backend
     buildCommand: pip install -r requirements.txt
-    preDeployCommand: flask --app wsgi db upgrade
-    startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 60 --access-logfile -
+    startCommand: sh scripts/start.sh
     healthCheckPath: /api/v1/health
     autoDeployTrigger: "off"
     envVars:
@@ -19,13 +18,19 @@ services:
           property: connectionString
       - key: FIREBASE_PROJECT_ID
         sync: false
-      - key: GOOGLE_APPLICATION_CREDENTIALS
-        value: /etc/secrets/firebase.json
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: REMINDER_SCHEDULER_KEY
+        sync: false
+      - key: FCM_ENABLED
+        value: "false"
+      - key: SEED_ON_START
+        value: "false"
       - key: CORS_ORIGINS
         sync: false
 databases:
   - name: club-nestor-arakaki-db
-    plan: basic-256mb
+    plan: free
     databaseName: club
     user: club
     postgresMajorVersion: "16"

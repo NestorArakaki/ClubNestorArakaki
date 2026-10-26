@@ -15,12 +15,15 @@ from .schemas import (
     BookingSchema,
     CourtPageSchema,
     CourtSchema,
+    DeviceResultSchema,
+    DeviceTokenSchema,
     ErrorSchema,
     HealthSchema,
     OpeningHourSchema,
     Pagination,
     ProfilePatchSchema,
     ProfileSchema,
+    ReminderResultSchema,
     VenuePageSchema,
     VenueSchema,
 )
@@ -212,3 +215,73 @@ class BookingDetail(MethodView):
     def delete(self, booking_id):
         """Cancelar una reserva propia futura y liberar el turno. Es idempotente."""
         return cancel_booking(g.user.id, booking_id)
+
+
+@blp.route("/devices")
+class Devices(MethodView):
+    @login_required
+    @blp.doc(security=SECURITY)
+    @blp.arguments(DeviceTokenSchema)
+    @blp.response(200, DeviceResultSchema)
+    def post(self, data):
+        """Registrar/actualizar el token FCM de este dispositivo para la identidad actual."""
+        import hashlib
+
+        from sqlalchemy.dialects.postgresql import insert
+
+        from .models import Device
+
+        stmt = insert(Device).values(
+            user_id=g.user.id,
+            token=data["token"],
+            token_hash=hashlib.sha256(data["token"].encode()).hexdigest(),
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[Device.token_hash],
+            set_={"user_id": g.user.id, "updated_at": utcnow()},
+        )
+        db.session.execute(stmt)
+        db.session.commit()
+        return {"registered": True}
+
+    @login_required
+    @blp.doc(security=SECURITY)
+    @blp.arguments(DeviceTokenSchema)
+    @blp.response(200, DeviceResultSchema)
+    def delete(self, data):
+        """Desvincular sólo un token propio. Idempotente, sin revelar su propietario."""
+        from .models import Device
+
+        db.session.execute(
+            sa.delete(Device).where(Device.user_id == g.user.id, Device.token == data["token"])
+        )
+        db.session.commit()
+        return {"registered": False}
+
+
+@blp.route("/internal/booking-reminders")
+class BookingReminders(MethodView):
+    @blp.doc(security=[{"SchedulerKey": []}])
+    @blp.response(200, ReminderResultSchema)
+    @blp.alt_response(401, schema=ErrorSchema)
+    @blp.alt_response(503, schema=ErrorSchema)
+    def post(self):
+        """Programador externo: recordar reservas confirmadas que comienzan en la próxima hora."""
+        import hmac
+
+        from flask import current_app, request
+
+        from .errors import ApiError
+        from .notifications import send_upcoming_reminders
+
+        secret = current_app.config.get("REMINDER_SCHEDULER_KEY", "")
+        if len(secret) < 32:
+            raise ApiError(
+                503, "scheduler_unavailable", "Falta configurar la clave del programador."
+            )
+        supplied = request.headers.get("X-Scheduler-Key", "")
+        if not hmac.compare_digest(secret.encode(), supplied.encode()):
+            raise ApiError(401, "invalid_scheduler_key", "Programador no autorizado.")
+        if not current_app.config.get("FCM_ENABLED"):
+            raise ApiError(503, "fcm_unavailable", "Las notificaciones no están activadas.")
+        return send_upcoming_reminders()

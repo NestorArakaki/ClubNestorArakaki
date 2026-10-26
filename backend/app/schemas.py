@@ -26,7 +26,7 @@ class VenueSchema(Schema):
 class CourtSchema(Schema):
     id = fields.Integer(dump_only=True)
     venue_id = fields.Integer()
-    name = fields.String()
+    name = fields.String(attribute="full_name")
     sport = fields.String()
     active = fields.Boolean()
 
@@ -148,3 +148,22 @@ class ErrorSchema(Schema):
 
 class HealthSchema(Schema):
     status = fields.String()
+
+
+class DeviceTokenSchema(Schema):
+    token = fields.String(required=True, validate=validate.Length(min=20, max=4096))
+
+    @validates("token")
+    def valid_token(self, value, **kwargs):
+        if any(c.isspace() for c in value):
+            raise ValidationError("El token no puede contener espacios.")
+
+
+class DeviceResultSchema(Schema):
+    registered = fields.Boolean()
+
+
+class ReminderResultSchema(Schema):
+    checked = fields.Integer()
+    sent = fields.Integer()
+    pending = fields.Integer()

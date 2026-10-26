@@ -1,3 +1,4 @@
+import json
 from functools import wraps
 from threading import Lock
 
@@ -14,19 +15,33 @@ from .models import User
 _firebase_lock = Lock()
 
 
+def get_firebase_app():
+    """ADC/Secret File o JSON privado del entorno; nunca registra credenciales."""
+    project_id = current_app.config["FIREBASE_PROJECT_ID"]
+    if not project_id:
+        raise ValueError("Falta FIREBASE_PROJECT_ID")
+    with _firebase_lock:
+        try:
+            return firebase_admin.get_app(project_id)
+        except ValueError:
+            raw = current_app.config.get("FIREBASE_SERVICE_ACCOUNT_JSON", "")
+            credential = (
+                credentials.Certificate(json.loads(raw))
+                if raw
+                else credentials.ApplicationDefault()
+            )
+            return firebase_admin.initialize_app(
+                credential, {"projectId": project_id, "httpTimeout": 5}, name=project_id
+            )
+
+
 def verify_token(token):
     """Siempre verifica firma, proyecto, expiración, revocación y usuario deshabilitado."""
     project_id = current_app.config["FIREBASE_PROJECT_ID"]
     if not project_id:
         raise ApiError(503, "auth_unavailable", "Firebase no está configurado.")
     try:
-        with _firebase_lock:
-            try:
-                firebase_app = firebase_admin.get_app(project_id)
-            except ValueError:
-                firebase_app = firebase_admin.initialize_app(
-                    credentials.ApplicationDefault(), {"projectId": project_id}, name=project_id
-                )
+        firebase_app = get_firebase_app()
         return auth.verify_id_token(token, app=firebase_app, check_revoked=True)
     except auth.CertificateFetchError as exc:
         raise ApiError(503, "auth_unavailable", "No se pudo consultar Firebase.") from exc

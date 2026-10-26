@@ -1,0 +1,229 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+
+import 'services/api_client.dart';
+import 'services/auth_service.dart';
+import 'services/notification_service.dart';
+import 'screens/auth_screen.dart';
+import 'screens/venues_screen.dart';
+import 'screens/bookings_screen.dart';
+import 'screens/profile_screen.dart';
+import 'screens/dashboard_screen.dart';
+import 'theme.dart';
+import 'widgets/async_view.dart';
+import 'widgets/error_panel.dart';
+
+class ClubApp extends StatefulWidget {
+  const ClubApp({
+    super.key,
+    required this.auth,
+    required this.api,
+    this.notifications,
+  });
+  final AuthService auth;
+  final ApiClient api;
+  final NotificationService? notifications;
+  @override
+  State<ClubApp> createState() => _ClubAppState();
+}
+
+class _ClubAppState extends State<ClubApp> {
+  late final Stream<String?> _sessions;
+  @override
+  void initState() {
+    super.initState();
+    _sessions = widget.auth.sessions;
+  }
+
+  @override
+  Widget build(BuildContext context) => StreamBuilder<String?>(
+    stream: _sessions,
+    initialData: widget.auth.uid,
+    builder: (context, snapshot) => MaterialApp(
+      // Un cambio de cuenta descarta todas las rutas y datos de la sesión anterior.
+      key: ValueKey(snapshot.data),
+      title: 'ClubNestorArakaki',
+      locale: const Locale('es'),
+      supportedLocales: const [Locale('es')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      theme: clubTheme(),
+      home: snapshot.hasError
+          ? const Scaffold(
+              body: Center(
+                child: Text(
+                  'No se pudo recuperar la sesión. Reiniciá la aplicación.',
+                ),
+              ),
+            )
+          : snapshot.connectionState == ConnectionState.waiting &&
+                snapshot.data == null
+          ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+          : snapshot.data == null
+          ? AuthScreen(auth: widget.auth)
+          : HomeScreen(
+              auth: widget.auth,
+              api: widget.api,
+              notifications: widget.notifications,
+            ),
+    ),
+  );
+}
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({
+    super.key,
+    required this.auth,
+    required this.api,
+    this.notifications,
+  });
+  final AuthService auth;
+  final ApiClient api;
+  final NotificationService? notifications;
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _tab = 0, _revision = 0;
+  bool _signingOut = false;
+  @override
+  void initState() {
+    super.initState();
+    widget.notifications?.target.addListener(_openPush);
+    unawaited(widget.notifications?.sync());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _openPush());
+  }
+
+  @override
+  void dispose() {
+    widget.notifications?.target.removeListener(_openPush);
+    super.dispose();
+  }
+
+  void _openPush() {
+    if (!mounted) return;
+    final service = widget.notifications;
+    final destination = service?.target.value;
+    if (destination == null) return;
+    service!.target.value = null;
+    if (destination.uid != widget.auth.uid) return;
+    setState(() {
+      _tab = 2;
+      _revision++;
+    });
+    unawaited(_openPushDetail(destination.bookingId));
+  }
+
+  Future<void> _openPushDetail(int bookingId) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            BookingDetailScreen(api: widget.api, bookingId: bookingId),
+      ),
+    );
+    if (mounted) {
+      setState(() {
+        _revision++;
+      });
+    }
+  }
+
+  Future<void> _logout() async {
+    setState(() {
+      _signingOut = true;
+    });
+    try {
+      await widget.notifications?.unlink();
+      await widget.auth.logout();
+    } catch (e) {
+      if (mounted) showMessage(context, friendlyErrorMessage(e));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _signingOut = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: const Text('ClubNestorArakaki'),
+      actions: [
+        IconButton(
+          tooltip: 'Cerrar sesión',
+          onPressed: _signingOut ? null : _logout,
+          icon: const Icon(Icons.logout),
+        ),
+      ],
+    ),
+    body: Column(
+      children: [
+        if (widget.notifications != null && _tab == 0)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ValueListenableBuilder<NotificationStatus>(
+              valueListenable: widget.notifications!.status,
+              builder: (_, status, child) => Row(
+                children: [
+                  Expanded(child: Text(status.message)),
+                  if (status.phase != NotificationPhase.enabled)
+                    TextButton(
+                      onPressed: status.phase == NotificationPhase.checking
+                          ? null
+                          : () => widget.notifications!.sync(
+                              requestPermission: true,
+                            ),
+                      child: Text(switch (status.phase) {
+                        NotificationPhase.error => 'Reintentar',
+                        NotificationPhase.checking => 'Comprobando…',
+                        _ => 'Activar avisos',
+                      }),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        Expanded(
+          child: switch (_tab) {
+            0 => DashboardScreen(
+              key: ValueKey(_revision),
+              api: widget.api,
+              onExplore: () => setState(() {
+                _tab = 1;
+                _revision++;
+              }),
+            ),
+            1 => VenuesScreen(api: widget.api),
+            2 => BookingsScreen(key: ValueKey(_revision), api: widget.api),
+            _ => ProfileScreen(api: widget.api),
+          },
+        ),
+      ],
+    ),
+    bottomNavigationBar: NavigationBar(
+      selectedIndex: _tab,
+      onDestinationSelected: (index) => setState(() {
+        _tab = index;
+        _revision++;
+      }),
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home),
+          label: 'Inicio',
+        ),
+        NavigationDestination(icon: Icon(Icons.stadium), label: 'Sedes'),
+        NavigationDestination(
+          icon: Icon(Icons.calendar_month),
+          label: 'Mis reservas',
+        ),
+        NavigationDestination(icon: Icon(Icons.person), label: 'Perfil'),
+      ],
+    ),
+  );
+}

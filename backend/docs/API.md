@@ -21,6 +21,8 @@ Contrato OpenAPI generado por las mismas rutas: `/openapi.json`; Swagger: `/docs
 | GET | `/bookings` | Bearer | 200 página de reservas propias |
 | GET | `/bookings/{id}` | Bearer | 200 reserva propia |
 | DELETE | `/bookings/{id}` | Bearer | 200 reserva cancelada |
+| POST | `/devices` | Bearer | 200 dispositivo registrado |
+| DELETE | `/devices` | Bearer | 200 dispositivo desvinculado |
 
 Listados paginados: `page` (desde 1, predeterminado 1) y `per_page`
 (1–100, predeterminado 20). Una página fuera de rango devuelve `items: []`.
@@ -48,7 +50,7 @@ Las sedes/canchas se ordenan por `id`; las reservas por inicio e `id` ascendente
 `GET /venues/1/courts` devuelve el mismo envoltorio, con objetos como:
 
 ```json
-{"id": 1, "venue_id": 1, "name": "Fútbol 5 - 1", "sport": "football", "active": true}
+{"id": 1, "venue_id": 1, "name": "Sede_Central_demo_Calle_Demo_100_Futbol_1", "sport": "football", "active": true}
 ```
 
 `GET /courts/1` devuelve directamente ese objeto. Una cancha inactiva sigue
@@ -178,7 +180,7 @@ canceladas. Sólo se muestran las reservas de la identidad autenticada.
 `DELETE /bookings/42` no lleva cuerpo y responde **200** con el objeto completo,
 `status: "cancelled"` y `cancelled_at` en UTC. La disponibilidad se libera antes
 de responder. Repetir la cancelación devuelve el mismo resultado. Una reserva
-confirmada que ya empezó responde 409. Un ID ajeno o inexistente responde 404.
+confirmada cuyo horario ya finalizó responde 409; se admite cancelar en curso. Un ID ajeno o inexistente responde 404.
 
 ## Errores
 
@@ -212,7 +214,7 @@ Los mensajes de la librería pueden estar en inglés; `code` es estable para Flu
 | 400 | `validation_error` | JSON mal formado; corregir solicitud. |
 | 401 | `authentication_required`, `invalid_token` | Obtener/renovar token; si persiste, iniciar sesión otra vez. |
 | 404 | `not_found` | Recurso inexistente o reserva ajena. |
-| 409 | `booking_conflict`, `court_unavailable`, `booking_started` | Refrescar disponibilidad o mostrar restricción de cancelación. |
+| 409 | `booking_conflict`, `court_unavailable`, `booking_finished` | Refrescar disponibilidad o mostrar restricción de cancelación. |
 | 413 | `request_entity_too_large` | Cuerpo mayor a 16 KiB. |
 | 422 | `validation_error`, `invalid_datetime`, `invalid_hour`, `past_booking`, `past_date`, `outside_opening_hours` | Corregir fecha, horario o campos. |
 | 503 | `auth_unavailable`, `database_unavailable` | Servicio/configuración no disponible; reintentar más tarde. |
@@ -222,11 +224,11 @@ No reintentar automáticamente un POST después de un error de red ambiguo: pued
 haberse confirmado. Primero consultar las reservas propias. La API no implementa
 claves de idempotencia; un segundo intento superpuesto confirmado recibe 409.
 
-## Flutter (integración posterior)
+## Flutter (cliente implementado)
 
-Agregar y configurar `firebase_core`, `firebase_auth` y un cliente HTTP en el
-proyecto Flutter cuando se implemente la integración. Ninguna dependencia Flutter
-fue modificada en este cambio. Ejemplo orientativo con `http`:
+El cliente [ApiClient](../../lib/services/api_client.dart) implementa este contrato
+con `http`, `firebase_core` y `firebase_auth`. La URL base se configura mediante
+`API_BASE_URL`. Ejemplo orientativo de la operación subyacente:
 
 ```dart
 final user = FirebaseAuth.instance.currentUser;
@@ -259,3 +261,50 @@ En producción usar HTTPS de Render. En Flutter Web, configurar `CORS_ORIGINS`
 con el origen real, incluido el puerto de desarrollo. Para mostrar la hora de
 la sede cuando difiere de la del teléfono, usar su zona IANA con una librería
 de zonas horarias; `DateTime.toLocal()` usa la zona del teléfono.
+
+## Dispositivos y FCM
+
+- `POST /devices`, Bearer, JSON `{"token":"<token FCM real del dispositivo>"}`:
+  200 `{"registered":true}`. Es idempotente y reasocia un dispositivo compartido
+  al usuario autenticado actual. No acepta UID ni user_id del cliente.
+- `DELETE /devices`, Bearer, mismo JSON: 200 `{"registered":false}`. Elimina
+  únicamente el registro propio, sin revelar si pertenece a otra identidad.
+- Token de 20–4096 caracteres sin espacios. No se devuelve ni registra en logs.
+  Una huella SHA-256 sirve de índice único para no exceder el límite B-tree.
+- Con `FCM_ENABLED=true`, después del commit de creación/cancelación se intenta
+  enviar al propietario `type=booking_created|booking_cancelled`, `booking_id`
+  y `recipient_uid` (UID Firebase firmado). Android usa el canal `bookings`.
+  El texto visible es genérico; la app comprueba el destinatario y consulta
+  los detalles mediante la ruta autenticada de reservas propias.
+- Una cancelación repetida no repite el aviso. Tokens inválidos que FCM informa
+  como `UnregisteredError` se eliminan. Fallas de Firebase se registran sólo
+  por tipo y no cambian el éxito de la reserva.
+- Envío best effort, síncrono y sin cola persistente: una caída del proceso
+  después del commit puede perder un aviso. Cada llamada al SDK tiene timeout
+  HTTP de 5 segundos; varios dispositivos agregan latencia. Hay recordatorios
+  programados mediante un workflow externo; no hay garantía de entrega. Las reservas se consultan siempre por API.
+
+
+## Nombre académico y recordatorios próximos
+
+El campo `name` de las canchas es el nombre completo derivado de sede, dirección,
+tipo y número: `Court.full_name`. No se renumeran IDs ni se cambia el formato de
+los demás campos. `courts.name` conserva internamente la etiqueta de precarga.
+Flutter puede filtrar `sport` sobre la lista paginada completa de la sede.
+
+`POST /internal/booking-reminders` no recibe cuerpo. Requiere el header privado
+`X-Scheduler-Key` configurado en el servidor; no se autoriza con Bearer de usuario.
+El secreto debe tener al menos 32 caracteres. Falta de configuración o FCM
+inactivo: 503. Clave errónea/ausente: 401. Éxito: 200 con contadores:
+`{"checked":1,"sent":1,"pending":0}`. No expone tokens ni datos de otros usuarios.
+
+Selecciona reservas confirmadas sin recordatorio aceptado cuyo inicio esté entre
+ahora (excluido) y ahora + 60 minutos (incluido). Usa bloqueo de fila con
+`SKIP LOCKED`. Si FCM acepta al menos un dispositivo, guarda `reminder_sent_at`;
+si no, permanece pendiente. El payload usa `type=booking_reminder`, `booking_id`
+y `recipient_uid`. Android descarta la entrega diferida después del comienzo
+mediante TTL. El cliente navega al detalle propio como en los otros avisos.
+
+El workflow gratuito y sus limitaciones están en [RECORDATORIOS.md](../../docs/RECORDATORIOS.md).
+Una caída entre envío y commit puede duplicar un recordatorio; no es una garantía
+exactamente una vez ni una prueba de lectura del destinatario.
