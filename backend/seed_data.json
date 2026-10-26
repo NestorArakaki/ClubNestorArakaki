@@ -1,0 +1,36 @@
+[
+  {
+    "name": "Sede Central (demo)",
+    "address": "Dirección de ejemplo: reemplazar antes de producción",
+    "timezone": "America/Argentina/Buenos_Aires",
+    "opening_hours": [
+      {"weekday": 0, "open_hour": 8, "close_hour": 23},
+      {"weekday": 1, "open_hour": 8, "close_hour": 23},
+      {"weekday": 2, "open_hour": 8, "close_hour": 23},
+      {"weekday": 3, "open_hour": 8, "close_hour": 23},
+      {"weekday": 4, "open_hour": 8, "close_hour": 24},
+      {"weekday": 5, "open_hour": 9, "close_hour": 24},
+      {"weekday": 6, "open_hour": 9, "close_hour": 22}
+    ],
+    "courts": [
+      {"name": "Fútbol 5 - 1", "sport": "football"},
+      {"name": "Fútbol 5 - 2", "sport": "football"},
+      {"name": "Tenis - 1", "sport": "tennis"},
+      {"name": "SUM", "sport": "multipurpose"}
+    ]
+  },
+  {
+    "name": "Sede Norte (demo)",
+    "address": "Dirección de ejemplo: reemplazar antes de producción",
+    "timezone": "America/Argentina/Buenos_Aires",
+    "opening_hours": [
+      {"weekday": 0, "open_hour": 10, "close_hour": 22},
+      {"weekday": 1, "open_hour": 10, "close_hour": 22},
+      {"weekday": 2, "open_hour": 10, "close_hour": 22},
+      {"weekday": 3, "open_hour": 10, "close_hour": 22},
+      {"weekday": 4, "open_hour": 10, "close_hour": 22},
+      {"weekday": 5, "open_hour": 10, "close_hour": 22}
+    ],
+    "courts": [{"name": "Pádel - 1", "sport": "padel"}]
+  }
+]

@@ -1,0 +1,12 @@
+Flask~=3.1.0
+flask-smorest~=0.46.0
+Flask-SQLAlchemy~=3.1.1
+Flask-Migrate~=4.1.0
+Flask-Cors~=6.0
+SQLAlchemy~=2.0
+psycopg[binary]~=3.2
+firebase-admin~=7.0
+python-dotenv~=1.1
+gunicorn~=23.0
+tzdata
+swagger-ui-bundle~=1.1
