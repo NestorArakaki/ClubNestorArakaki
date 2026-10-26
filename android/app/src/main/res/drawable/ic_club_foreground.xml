@@ -1,0 +1,7 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Cancha deportiva propia; sin imágenes remotas ni generador de íconos. -->
+    <path android:fillColor="#FFFFFFFF" android:pathData="M25,30h58v48H25z"/>
+    <path android:fillColor="#00695C" android:pathData="M29,34h50v40H29z"/>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M52,34h4v40h-4zM29,44h12v20H29v-4h8V48h-8zM79,44H67v20h12v-4h-8V48h8z"/>
+    <path android:fillColor="#00695C" android:strokeColor="#FFFFFFFF" android:strokeWidth="3" android:pathData="M54,44a10,10 0,1 0,0 20a10,10 0,1 0,0 -20"/>
+</vector>

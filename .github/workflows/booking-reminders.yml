@@ -1,0 +1,46 @@
+name: Recordatorios de reservas
+on:
+  schedule:
+    # Cada 10 minutos, evitando el inicio de la hora. Se activa en la rama principal.
+    - cron: '7,17,27,37,47,57 * * * *'
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: booking-reminders
+  cancel-in-progress: false
+jobs:
+  notify:
+    # Sin cargos por runners privados ni llamadas hasta configurar el servicio.
+    if: github.event.repository.private == false && vars.REMINDERS_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Consultar reservas próximas y enviar FCM
+        env:
+          API_BASE_URL: ${{ vars.REMINDER_API_BASE_URL }}
+          SCHEDULER_KEY: ${{ secrets.REMINDER_SCHEDULER_KEY }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+          import urllib.error
+          import urllib.request
+          from urllib.parse import urlsplit
+          base = os.environ['API_BASE_URL'].rstrip('/')
+          url = urlsplit(base)
+          key = os.environ['SCHEDULER_KEY']
+          if url.scheme != 'https' or not url.netloc or url.username or url.query or url.fragment or not url.path.endswith('/api/v1') or len(key) < 32:
+              sys.exit('Configurar API HTTPS /api/v1 y clave privada de al menos 32 caracteres.')
+          request = urllib.request.Request(base + '/internal/booking-reminders', method='POST', headers={'X-Scheduler-Key': key})
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, *args, **kwargs):
+                  return None
+          try:
+              with urllib.request.build_opener(NoRedirect).open(request, timeout=110) as response:
+                  print(json.dumps(json.load(response)))
+          except urllib.error.HTTPError as exc:
+              sys.exit(f'El programador recibió HTTP {exc.code}. Revisar configuración y logs del backend.')
+          except (urllib.error.URLError, TimeoutError):
+              sys.exit('La API no respondió. Comprobar Render y ejecutar nuevamente el workflow.')
+          PY

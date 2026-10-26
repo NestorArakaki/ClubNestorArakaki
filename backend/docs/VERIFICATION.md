@@ -1,53 +1,27 @@
-# Verificación de la implementación
+# Verificación del backend contra el TP
 
-Comprobaciones ejecutadas en esta tarea con Python 3.12.14 y PostgreSQL 16 en un
-contenedor local descartable. No se usó SQLite ni credenciales Firebase reales.
+Auditoría posterior al frontend: **85 pruebas aprobadas y 96% de cobertura**
+sobre PostgreSQL 16 real descartable con Python 3.12.14. Ruff análisis/formato
+correctos. No se usó SQLite ni credenciales Firebase reales.
 
-## Ejecutado
+Se conservan los tests de reservas, superposición, concurrencia, cancelación,
+propiedad, perfil, validaciones, errores, OpenAPI, dispositivos y arranque seguro.
+Se agregaron pruebas de recordatorios próximos: secreto de scheduler, ventana,
+estado, marca persistente, TTL, reintento y dos peticiones concurrentes. Se prueba
+el nombre compuesto real de la cancha. La cancelación permite reservas en curso;
+las finalizadas siguen protegidas en historial.
 
-- Suite `pytest` sobre PostgreSQL: **69 pruebas aprobadas, 97% de cobertura**.
-  Incluye superposiciones parciales/totales, inserción directa que viola la
-  exclusión, reservas consecutivas y canchas distintas.
-- Solicitudes concurrentes con clientes/conexiones independientes y una barrera
-  antes de insertar: una responde 201 y la otra 409; queda una sola reserva.
-  Se probó con usuarios diferentes y con el mismo usuario.
-- Cancelación, liberación del turno, intento de cancelar reservas ajenas o
-  iniciadas, y cancelaciones simultáneas idempotentes.
-- Perfil propio, email de sólo lectura, fechas/horarios inválidos, autenticación
-  ausente, token rechazado/expirado/revocado, usuario deshabilitado y falla del SDK.
-- OpenAPI validado con `openapi-spec-validator`; Swagger y sus recursos locales
-  responden correctamente. Los endpoints privados declaran autenticación Bearer.
-- Migraciones: base vacía → `upgrade`; luego `downgrade base` → `upgrade`, usando
-  exclusivamente la base de pruebas. `db check` no detectó cambios pendientes.
-- Precarga idempotente; dos ejecuciones conservaron dos sedes y cinco canchas demo.
-- Instalación de `requirements.txt` en un segundo entorno virtual limpio;
-  `pip check` sin conflictos.
-- Arranque HTTP real con Gunicorn, dos workers y cuatro threads, utilizando sólo
-  dependencias de producción: salud, sedes, canchas, `/docs`, `/openapi.json` y
-  recursos Swagger respondieron 200. El proceso de comprobación fue detenido.
-- Ruff (análisis y formato) y comprobación de whitespace de Git.
+`db check` no detectó cambios pendientes. Se ejecutó upgrade de 1003, downgrade a
+1002 y upgrade nuevamente sólo en la base descartable. La marca nueva es nullable
+y no reemplaza ni elimina reservas existentes. Ocho advertencias del SDK sobre
+`Message.token` no impidieron aprobar la suite.
 
-## Pendiente de verificar con servicios del proyecto
+La implementación anterior verificó seed repetido, migraciones desde base vacía
+y arranque HTTP real con Gunicorn. Resultados completos, evidencia CI y pasos
+personales pendientes en [VERIFICACION.md](../../docs/VERIFICACION.md).
+El envío con SDK sustituido no equivale a entrega Firebase real. Activación
+segura del programador en [RECORDATORIOS.md](../../docs/RECORDATORIOS.md).
 
-1. **Firebase real**: configurar el ID del proyecto y la cuenta de servicio con
-   permisos de lectura de usuarios. Obtener un ID token desde Flutter/Firebase
-   Auth; comprobar `/me`, crear/cancelar una reserva, y verificar que un token de
-   otro proyecto, revocado o de un usuario deshabilitado sea rechazado. Las pruebas
-   locales sustituyen el límite del SDK; no prueban firma ni red contra Firebase.
-2. **Render**: crear los servicios y montar el Secret File siguiendo el README.
-   No se desplegó ni se crearon recursos pagos. Verificar permisos para
-   `btree_gist`, la migración previa al deploy y salud/autenticación en HTTPS.
-3. **Flutter**: integrar el cliente con el contrato de `API.md` y comprobar el
-   flujo completo en emulador/dispositivo. No se modificó el código Flutter.
-4. **GitHub Actions**: el workflow se incluye para repetir las pruebas en cada
-   cambio del backend; su ejecución remota depende de GitHub y de las opciones
-   habilitadas en el repositorio. Los resultados locales no afirman un CI remoto exitoso.
-
-## Alcance funcional
-
-Una franja de apertura por día de la semana, sin feriados ni excepciones por
-fecha; reservas en bloques de horas enteras, sin pagos, precios, administración
-visual o claves de idempotencia. Para un cambio de turno se cancela y se reserva
-otro sujeto a disponibilidad. Una falla de red después de enviar un POST requiere
-consultar las reservas propias antes de reintentar. Estos límites se documentan
-también en el contrato para el cliente.
+CI actual: [Backend aprobado](https://github.com/NestorArakaki/ClubNestorArakaki/actions/runs/39134442623),
+y [Flutter aprobado con APK debug](https://github.com/NestorArakaki/ClubNestorArakaki/actions/runs/39134442583),
+commit funcional `4cadd6c`. No se activó el programador de recordatorios remoto.
